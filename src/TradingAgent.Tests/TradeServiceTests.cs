@@ -112,7 +112,7 @@ namespace TradingAgent.Tests
             var tradingId = await tradeService.Step1CheckConditionsThenRegisterANewTradeAsync();
             await Task.Delay(10);
 
-            var trading = await dbAdapter.GetTrading(tradingId);
+            var trading = await dbAdapter.GetTradingAsync(tradingId);
 
             Assert.False(trading.IsRollback);
             Assert.Equal(Stage.SellOrderFilled, trading.Stage);
@@ -196,7 +196,7 @@ namespace TradingAgent.Tests
             int tradingId = await tradeService.Step1CheckConditionsThenRegisterANewTradeAsync();
             await Task.Delay(10);
 
-            var trading = await dbAdapter.GetTrading(tradingId);
+            var trading = await dbAdapter.GetTradingAsync(tradingId);
 
             Assert.True(trading.IsRollback);
             Assert.Equal(Stage.SellOrderFilled, trading.Stage);

@@ -54,7 +54,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task<Trading> GetActiveTrading(string holdAsset, Stage? stage = null, string processId = null)
+        public async Task<Trading> GetActiveTradingAsync(string holdAsset, Stage? stage = null, string processId = null)
         {
             var query = "select * from Tradings where Active = 1 and HoldAsset = @HoldAsset";
 
@@ -82,7 +82,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task<Trading> GetTrading(int id)
+        public async Task<Trading> GetTradingAsync(int id)
         {
             var query = "select * from Tradings where Id = @Id";
 
@@ -215,7 +215,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateSellOrderReadTime(int id, string processId)
+        public async Task UpdateSellOrderReadTimeAsync(int id, string processId)
         {
             using (var db = CreateDbConnection())
             {

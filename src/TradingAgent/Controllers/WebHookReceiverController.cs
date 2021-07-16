@@ -19,15 +19,15 @@ namespace TradingAgent.Controllers
             this.appSecrets = appSecrets ?? throw new ArgumentNullException(nameof(appSecrets));
         }
 
-        [HttpPost("/events/{whrObfuscatedRouteSegment}/enjusdt")]
-        public IActionResult TradeEnjUsdt(string whrObfuscatedRouteSegment)
+        [HttpPost("/events/{whrObfuscatedRouteSegment}/ENJBUSD")]
+        public IActionResult TradeEnjBusd(string whrObfuscatedRouteSegment)
         {
             if(whrObfuscatedRouteSegment != appSecrets.WhrObfuscatedRouteSegment)
             {
                 return BadRequest(string.Empty);
             }
 
-            logger.LogInformation($"New request {nameof(TradeEnjUsdt)}");
+            logger.LogInformation($"New request {nameof(TradeEnjBusd)}");
 
             var request = new Request(null);
             RequestProcessorBackgroundWorker.EnqueueRequest(request);

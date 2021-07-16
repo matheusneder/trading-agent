@@ -79,7 +79,7 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.JustRegistered, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.JustRegistered, processId);
 
             if (activeTrading != null)
             {
@@ -95,7 +95,7 @@ namespace TradingAgent
                     
                     logger.LogInformation($"Trading #{{TradingId}}. Creating buy order!");
 
-                    await BinanceSignatureOrTimestampErrorRetrierHelper(async () => 
+                    await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () => 
                         await binanceApiAdapter.CreateBuyOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.BuyOrderQuoteQty));
 
                     await Step3UpdateOrderCreatedStageAsync(processId);
@@ -107,7 +107,7 @@ namespace TradingAgent
             }
         }
 
-        private async Task BinanceSignatureOrTimestampErrorRetrierHelper(Func<Task> action)
+        private async Task BinanceSignatureOrTimestampErrorRetrierHelperAsync(Func<Task> action)
         {
             bool createBuyOrderExecuted = false;
             int createBuyOrderAttempts = 0;
@@ -144,7 +144,7 @@ namespace TradingAgent
         public async Task Step3UpdateOrderCreatedStageAsync(string processId)
         {
             var holdAsset = appConfig.HoldAsset;
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.CreatingBuyOrder, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.CreatingBuyOrder, processId);
 
             if (activeTrading != null)
             {
@@ -163,7 +163,7 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.BuyOrderCreated, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.BuyOrderCreated, processId);
 
             if (activeTrading != null)
             {
@@ -222,7 +222,7 @@ namespace TradingAgent
             var stopLossPercent = appConfig.StopLossPercent;
             var rollbackPricePercent = appConfig.RollbackPricePercent;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.BuyOrderFilled, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.BuyOrderFilled, processId);
 
 
             if (activeTrading != null)
@@ -250,7 +250,7 @@ namespace TradingAgent
             var tradeAsset = appConfig.TradeAsset;
             var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, processId: processId); 
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, processId: processId); 
 
             if (activeTrading != null)
             {
@@ -270,7 +270,7 @@ namespace TradingAgent
                 }
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
-                await BinanceSignatureOrTimestampErrorRetrierHelper(async () =>
+                await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
                     await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, sellPrice, activeTrading.SellStopLimitPrice.Value, activeTrading.IsRollback));
 
                 await Step7UpdateSellOrderCreatedStageAsync(processId);
@@ -284,7 +284,7 @@ namespace TradingAgent
         public async Task Step7UpdateSellOrderCreatedStageAsync(string processId)
         {
             var holdAsset = appConfig.HoldAsset;
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.CreatingSellOrder, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.CreatingSellOrder, processId);
 
             if (activeTrading != null)
             {
@@ -305,7 +305,7 @@ namespace TradingAgent
             var holdAsset = appConfig.HoldAsset;
             decimal estimatedFeesPercent = appConfig.EstimatedFeesPercent;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.SellOrderCreated, processId);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated, processId);
 
             if (activeTrading != null)
             {
@@ -315,7 +315,7 @@ namespace TradingAgent
                 bool isOcoOrderActive = false;
                 decimal currentPrice = decimal.MaxValue;
 
-                bool shouldRollBack(Trading t, decimal price) => !t.IsRollback && price <= t.RollbackPrice;
+                bool shouldRollback(Trading t, decimal price) => !t.IsRollback && price <= t.RollbackPrice;
                 Task delayReadOrderTask = Task.CompletedTask;
                 int readConsecutiveStatusNullCount = 0;
 
@@ -337,7 +337,7 @@ namespace TradingAgent
 
                             logger.LogInformation($"Trading #{{TradingId}}. Price read {{PriceRead}} ({nameof(Step8WatchSellOrderAndPriceAsync)})", activeTrading.Id, currentPrice);
 
-                            if (shouldRollBack(activeTrading, currentPrice))
+                            if (shouldRollback(activeTrading, currentPrice))
                             {
                                 logger.LogInformation("Trading #{TradingId}. Rollback condition reached at current price {CurrentPrice}", activeTrading.Id, currentPrice);
                                 break;
@@ -349,7 +349,7 @@ namespace TradingAgent
                     
                     // watch order
                     ocoStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.IsRollback);
-                    await dbAdapter.UpdateSellOrderReadTime(activeTrading.Id, processId);
+                    await dbAdapter.UpdateSellOrderReadTimeAsync(activeTrading.Id, processId);
 
                     if(ocoStatus == null)
                     {
@@ -376,7 +376,7 @@ namespace TradingAgent
                     {
                         logger.LogInformation("Trading #{TradingId}. Oco order still alive!", activeTrading.Id);
 
-                        if (shouldRollBack(activeTrading, currentPrice))
+                        if (shouldRollback(activeTrading, currentPrice))
                         {
                             logger.LogInformation("Trading #{TradingId}. Rollingback!", activeTrading.Id);
 
@@ -418,7 +418,7 @@ namespace TradingAgent
 
                 logger.LogInformation("Trading #{TradingId}. OCO completed!", activeTrading.Id);
 
-                Trading completedTrading = await dbAdapter.GetTrading(activeTrading.Id);
+                Trading completedTrading = await dbAdapter.GetTradingAsync(activeTrading.Id);
 
                 logger.LogInformation("Trade profit: {TradeCompletedProfitPercentage}", completedTrading.TradeCompletedProfitPercentage);
                 
@@ -450,7 +450,7 @@ namespace TradingAgent
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.SellOrderCreated);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated);
 
             if (activeTrading != null)
             {
@@ -458,7 +458,7 @@ namespace TradingAgent
                 
                 logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!");
 
-                await BinanceSignatureOrTimestampErrorRetrierHelper(async () =>
+                await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
                     await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, holdAsset, tradeAsset));
 
                 await Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(processId);
@@ -473,7 +473,7 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.RollbackCancellingOcoOrder);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackCancellingOcoOrder);
 
             if (activeTrading != null)
             {
@@ -493,7 +493,7 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
 
-            var activeTrading = await dbAdapter.GetActiveTrading(holdAsset, Stage.RollbackCancelOcoOrderExecuted);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackCancelOcoOrderExecuted);
 
             if (activeTrading != null)
             {
@@ -544,16 +544,23 @@ namespace TradingAgent
         {
             Task delayTask = Task.CompletedTask;
 
-            while (!await dbAdapter.AnyActiveTradeAsync(activeTrading.HoldAsset)) 
+            try
             {
-                await delayTask;
-                delayTask = DelayAsync(WatchPriceInterval);
-                var currentPrice = await RetriveCurrentPriceThenUpdateMinOrMaxPriceIfReachedAsync(activeTrading, processId);
+                while (!await dbAdapter.AnyActiveTradeAsync(activeTrading.HoldAsset))
+                {
+                    await delayTask;
+                    delayTask = DelayAsync(WatchPriceInterval);
+                    var currentPrice = await RetriveCurrentPriceThenUpdateMinOrMaxPriceIfReachedAsync(activeTrading, processId);
 
-                logger.LogInformation($"Trading #{{TradingId}}. Price read {{PriceRead}} ({nameof(KeepWatchingPriceAsync)})", activeTrading.Id, currentPrice);
+                    logger.LogDebug($"Trading #{{TradingId}}. Price read {{PriceRead}} ({nameof(KeepWatchingPriceAsync)})", activeTrading.Id, currentPrice);
+                }
+
+                logger.LogInformation($"Trading #{{TradingId}}. Stopping watching price due other order activated.", activeTrading.Id);
             }
-
-            logger.LogInformation($"Trading #{{TradingId}}. Stopping watching price due other order activated.", activeTrading.Id);
+            catch(Exception e)
+            {
+                logger.LogError(e, $"Error on {nameof(KeepWatchingPriceAsync)}. Stopping watching!");
+            }
         }
 
         private async Task<decimal> RetriveCurrentPriceThenUpdateMinOrMaxPriceIfReachedAsync(Trading activeTrading, string processId)

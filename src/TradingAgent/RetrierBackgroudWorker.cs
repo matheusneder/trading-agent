@@ -50,7 +50,7 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
 
-            var activeTrading  = await dbAdapter.GetActiveTrading(holdAsset);
+            var activeTrading  = await dbAdapter.GetActiveTradingAsync(holdAsset);
 
             if (activeTrading != null)
             {
