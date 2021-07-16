@@ -342,7 +342,7 @@ namespace TradingAgent
                             delayReadPriceTask = DelayAsync(WatchPriceInterval);
                             currentPrice = await RetriveCurrentPriceThenUpdateMinOrMaxPriceIfReachedAsync(activeTrading, processId);
 
-                            logger.LogInformation($"Trading #{{TradingId}}. Price read {{PriceRead}} ({nameof(Step8WatchSellOrderAndPriceAsync)})", activeTrading.Id, currentPrice);
+                            logger.LogDebug($"Trading #{{TradingId}}. Price read {{PriceRead}} ({nameof(Step8WatchSellOrderAndPriceAsync)})", activeTrading.Id, currentPrice);
 
                             if (shouldRollback(activeTrading, currentPrice))
                             {
