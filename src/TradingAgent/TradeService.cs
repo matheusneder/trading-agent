@@ -19,6 +19,8 @@ namespace TradingAgent
         private const int WatchPriceInterval = 2000;
         private const int WatchOrderInterval = 30000;
         private static readonly int WatchPriceMaxIterations = Convert.ToInt32(Math.Round((double)WatchOrderInterval / (double)WatchPriceInterval));
+        // TODO: Review
+        internal static bool EnjBusdPrepared = false;
 
         public bool SkipDelays { get; set; } = false; // for test purposes only
 
@@ -41,12 +43,17 @@ namespace TradingAgent
 
             var processId = Guid.NewGuid().ToString();
 
-            if (await dbAdapter.AnyActiveTradeAsync(holdAsset))
+            if (!EnjBusdPrepared)
+            {
+                logger.LogInformation("Trade not prepared! Skipping....");
+            }
+            else if (await dbAdapter.AnyActiveTradeAsync(holdAsset))
             {
                 logger.LogInformation("Seems there is an incomplete trade running. Skiping for now...");
             }
             else
             {
+                EnjBusdPrepared = false;
                 var holdAssetBalance = await binanceApiAdapter.GetBalanceAsync(holdAsset);
                 logger.LogInformation("Current {Asset} balance: {Balance}", holdAsset, holdAssetBalance);
                 var stopTradingThreshold = await dbAdapter.GetStopThresholdAsync(holdAsset);

@@ -12,11 +12,13 @@ namespace TradingAgent.Controllers
     {
         private readonly ILogger logger;
         private readonly AppSecrets appSecrets;
+        private readonly DbAdapter dbAdapter;
 
-        public WebHookReceiverController(ILoggerFactory loggerFactory, AppSecrets appSecrets)
+        public WebHookReceiverController(ILoggerFactory loggerFactory, AppSecrets appSecrets, DbAdapter dbAdapter)
         {
             logger = loggerFactory.CreateLogger<WebHookReceiverController>() ?? throw new ArgumentNullException(nameof(loggerFactory));
             this.appSecrets = appSecrets ?? throw new ArgumentNullException(nameof(appSecrets));
+            this.dbAdapter = dbAdapter ?? throw new ArgumentNullException(nameof(dbAdapter));
         }
 
         [HttpPost("/events/{whrObfuscatedRouteSegment}/ENJBUSD")]
@@ -32,6 +34,30 @@ namespace TradingAgent.Controllers
             var request = new Request(null);
             RequestProcessorBackgroundWorker.EnqueueRequest(request);
             
+            return Ok();
+        }
+
+        [HttpPost("/events/{whrObfuscatedRouteSegment}/ENJBUSD/Prepare")]
+        public async Task<IActionResult> TradeEnjBusdPrepareAsync(string whrObfuscatedRouteSegment)
+        {
+            if (whrObfuscatedRouteSegment != appSecrets.WhrObfuscatedRouteSegment)
+            {
+                return BadRequest(string.Empty);
+            }
+
+            logger.LogInformation($"New request {nameof(TradeEnjBusdPrepareAsync)}");
+
+            // TODO: review
+            if (!await dbAdapter.AnyActiveTradeAsync("BUSD"))
+            {
+                logger.LogInformation("Preparing to go trade!!!");
+                TradeService.EnjBusdPrepared = true;
+            }
+            else
+            {
+                logger.LogInformation("There is activetranding, skipping....");
+            }
+
             return Ok();
         }
 
