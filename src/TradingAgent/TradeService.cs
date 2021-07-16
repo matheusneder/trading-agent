@@ -426,9 +426,11 @@ namespace TradingAgent
 
                 if (profitMinusFeesPercentage > 0m)
                 {
+                    var stopThresholdIncrementPercentage = profitMinusFeesPercentage * 0.75m;
+
                     logger.LogInformation("Trading #{TradingId}. Increasing StopThreshold by {StopThresholdIncrementPercentage}!", activeTrading.Id, stopThresholdIncrementPercentage);
 
-                    await dbAdapter.IncreaseStopThresholdAsync(holdAsset, profitMinusFeesPercentage * 0.75m);
+                    await dbAdapter.IncreaseStopThresholdAsync(holdAsset, stopThresholdIncrementPercentage);
                 }
                 else
                 {
