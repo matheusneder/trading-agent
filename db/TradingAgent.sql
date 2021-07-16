@@ -31,6 +31,7 @@ CREATE TABLE [dbo].[Tradings]
 	[CompletedAt] DATETIMEOFFSET NULL,
 	[UpdatedAt] DATETIMEOFFSET NULL,
 	[AbortReason] NVARCHAR(MAX) NULL,
+	[ProcessId] NVARCHAR(50) NOT NULL,
 	[Active] BIT NOT NULL DEFAULT 1
 );
 GO

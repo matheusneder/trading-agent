@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -22,11 +23,11 @@ namespace TradingAgent
         private IDbConnection CreateDbConnection() => 
             new SqlConnection(sqlConnectionString);
 
-        public async Task<int> InsertNewOperationAsync(string holdAsset, string tradeAsset, decimal buyOrderQuoteQty)
+        public async Task<int> InsertNewOperationAsync(string holdAsset, string tradeAsset, decimal buyOrderQuoteQty, string processId)
         {
-            var query = @"insert into Tradings (Stage, CreatedAt, HoldAsset, TradeAsset, BuyOrderQuoteQty, UpdatedAt)
+            var query = @"insert into Tradings (Stage, CreatedAt, HoldAsset, TradeAsset, BuyOrderQuoteQty, UpdatedAt, ProcessId)
                     output inserted.Id
-                    values(@Stage, @CreatedAt, @HoldAsset, @TradeAsset, @BuyOrderQuoteQty, @UpdatedAt)";
+                    values(@Stage, @CreatedAt, @HoldAsset, @TradeAsset, @BuyOrderQuoteQty, @UpdatedAt, @ProcessId)";
 
             using(var db = CreateDbConnection())
             {
@@ -38,7 +39,8 @@ namespace TradingAgent
                     HoldAsset = holdAsset, 
                     TradeAsset = tradeAsset,
                     BuyOrderQuoteQty = buyOrderQuoteQty,
-                    UpdatedAt = DateTimeOffset.Now
+                    UpdatedAt = DateTimeOffset.Now,
+                    ProcessId = processId
                 };
 
                 try
@@ -52,7 +54,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task<Trading> GetActiveTrading(string holdAsset, Stage? stage = null)
+        public async Task<Trading> GetActiveTrading(string holdAsset, Stage? stage = null, string processId = null)
         {
             var query = "select * from Tradings where Active = 1 and HoldAsset = @HoldAsset";
 
@@ -61,9 +63,22 @@ namespace TradingAgent
                 query += " and Stage = @Stage";
             }
 
+            if(processId != null)
+            {
+                query += " and ProcessId = @ProcessId";
+            }
+
             using (var db = CreateDbConnection())
             {
-                return await db.QuerySingleOrDefaultAsync<Trading>(query, new { HoldAsset = holdAsset, Stage = stage });
+                return await db.QuerySingleOrDefaultAsync<Trading>(query, new { HoldAsset = holdAsset, Stage = stage, ProcessId = processId });
+            }
+        }
+
+        public async Task UpdateTradingProcessIdAsync(int id, string newProcessId)
+        {
+            using (var db = CreateDbConnection())
+            {
+                await db.ExecuteAsync("update Tradings set ProcessId = @ProcessId where Id = @Id", new { Id = id, ProcessId = newProcessId });
             }
         }
 
@@ -89,13 +104,13 @@ namespace TradingAgent
         {
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync("update StopLossControl set StopThreshold = StopThreshold * @StopThresholdIncrement, UpdatedAt = @UpdatedAt where HoldAsset = @HoldAsset",
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync("update StopLossControl set StopThreshold = StopThreshold * @StopThresholdIncrement, UpdatedAt = @UpdatedAt where HoldAsset = @HoldAsset",
                     new
                     {
                         HoldAsset = holdAsset,
                         StopThresholdIncrement = percentage / 100m + 1m,
                         UpdatedAt = DateTimeOffset.Now
-                    });
+                    }));
             }
         }
 
@@ -109,34 +124,35 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateTradeCompletedAndNotInitializedStageAsync(int id, string abortReason = null)
+        public async Task UpdateTradeCompletedAndNotInitializedStageAsync(int id, string abortReason, string processId)
         {
             using(var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(@"update Tradings set Stage = @Stage, Active = 0, UpdatedAt = @UpdatedAt, CompletedAt = @CompletedAt, AbortReason = @AbortReason where Id = @Id", 
-                    new { Id = id, Stage = Stage.CompletedAndNotInitialized, UpdatedAt = DateTimeOffset.Now, CompletedAt = DateTimeOffset.Now, AbortReason = abortReason });
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(@"update Tradings set Stage = @Stage, Active = 0, UpdatedAt = @UpdatedAt, CompletedAt = @CompletedAt, AbortReason = @AbortReason where Id = @Id and ProcessId = @ProcessId", 
+                    new { Id = id, Stage = Stage.CompletedAndNotInitialized, UpdatedAt = DateTimeOffset.Now, CompletedAt = DateTimeOffset.Now, AbortReason = abortReason, ProcessId = processId }));
             }
         }
 
-        public async Task UpdateOrderCreatedStageAsync(int id)
+        public async Task UpdateOrderCreatedStageAsync(int id, string processId)
         {
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync("update Tradings set Stage = @Stage, BuyOrderCreatedAt = @BuyOrderCreatedAt, UpdatedAt = @UpdatedAt where Id = @Id", 
-                    new { Id = id, Stage = Stage.BuyOrderCreated, BuyOrderCreatedAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now });
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync("update Tradings set Stage = @Stage, BuyOrderCreatedAt = @BuyOrderCreatedAt, UpdatedAt = @UpdatedAt where Id = @Id and ProcessId = @ProcessId", 
+                    new { Id = id, Stage = Stage.BuyOrderCreated, BuyOrderCreatedAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now, ProcessId = processId }));
             }
         }
 
-        public async Task UpdateTradingCreatingBuyOrderStageAsync(int id)
+        public async Task UpdateTradingCreatingBuyOrderStageAsync(int id, string processId)
         {
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync("update Tradings set Stage = @Stage, UpdatedAt = @UpdatedAt where Id = @Id", 
-                    new { Id = id, Stage = Stage.CreatingBuyOrder, UpdatedAt = DateTimeOffset.Now });
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync("update Tradings set Stage = @Stage, UpdatedAt = @UpdatedAt where Id = @Id and ProcessId = @ProcessId", 
+                    new { Id = id, Stage = Stage.CreatingBuyOrder, UpdatedAt = DateTimeOffset.Now, ProcessId = processId }));
+
             }
         }
 
-        public async Task UpdateBuyOrderFilledStageAsync(Order order)
+        public async Task UpdateBuyOrderFilledStageAsync(Order order, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
@@ -146,7 +162,7 @@ namespace TradingAgent
                                 BuyPrice = @BuyPrice,
                                 TradeAssetQty = @TradeAssetQty,
                                 UpdatedAt = @UpdatedAt
-                              where Id = @Id";
+                              where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
@@ -157,16 +173,17 @@ namespace TradingAgent
                 BuyOrderFilledAt = order.UpdatedAt,
                 BuyPrice = order.Price,
                 TradeAssetQty = order.ExecutedQty,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateSellOrderFilledStageAsync(Order order)
+        public async Task UpdateSellOrderFilledStageAsync(Order order, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
@@ -177,7 +194,7 @@ namespace TradingAgent
                                 CompletedAt = @CompletedAt,
                                 UpdatedAt = @UpdatedAt,
                                 Active = 0
-                              where Id = @Id";
+                              where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
@@ -188,25 +205,26 @@ namespace TradingAgent
                 TradeAssetQty = order.ExecutedQty,
                 SellOrderKind = order.OrderKind,
                 CompletedAt = order.UpdatedAt,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateSellOrderReadTime(int id)
+        public async Task UpdateSellOrderReadTime(int id, string processId)
         {
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync("update Tradings set SellOrderLastReadAt = @SellOrderLastReadAt, UpdatedAt = @UpdatedAt where Id = @id", 
-                    new { Id = id, SellOrderLastReadAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now });
+                await db.ExecuteAsync("update Tradings set SellOrderLastReadAt = @SellOrderLastReadAt, UpdatedAt = @UpdatedAt where Id = @id and ProcessId = @ProcessId", 
+                    new { Id = id, SellOrderLastReadAt = DateTimeOffset.Now, UpdatedAt = DateTimeOffset.Now, ProcessId = processId });
             }
         }
 
-        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopLimitPrice, decimal rollbackPrice)
+        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopLimitPrice, decimal rollbackPrice, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
@@ -214,7 +232,7 @@ namespace TradingAgent
                                 SellStopLimitPrice = @SellStopLimitPrice,
                                 RollbackPrice = @RollbackPrice,
                                 UpdatedAt = @UpdatedAt
-                              where Id = @Id";
+                              where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
@@ -223,100 +241,105 @@ namespace TradingAgent
                 SellPrice = sellPrice,
                 SellStopLimitPrice = sellStopLimitPrice,
                 RollbackPrice = rollbackPrice,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateSellOrderCreatedStageAsync(int id)
+        public async Task UpdateSellOrderCreatedStageAsync(int id, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
                                 SellOrderCreatedAt = @SellOrderCreatedAt,
                                 UpdatedAt = @UpdatedAt
-                              where Id = @Id";
+                              where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.SellOrderCreated,
                 SellOrderCreatedAt = DateTimeOffset.Now,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateMaxPriceAsync(int id, decimal maxPrice)
+        public async Task UpdateMaxPriceAsync(int id, decimal maxPrice, string processId)
         {
             var query = @"update Tradings set 
                                 MaxPriceRead = @MaxPriceRead,
                                 MaxPriceReadAt = @MaxPriceReadAt,
                                 UpdatedAt = @UpdatedAt
-                            where id = @Id";
+                            where id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 MaxPriceRead = maxPrice,
                 MaxPriceReadAt = DateTimeOffset.Now,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using(var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateSellOrderCreatingStageAsync(int id)
+        public async Task UpdateSellOrderCreatingStageAsync(int id, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
                                 SellOrderCreatedAt = @SellOrderCreatedAt,
                                 UpdatedAt = @UpdatedAt
-                              where Id = @Id";
+                              where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.CreatingSellOrder,
                 SellOrderCreatedAt = DateTimeOffset.Now,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateMinPriceAsync(int id, decimal minPrice)
+        public async Task UpdateMinPriceAsync(int id, decimal minPrice, string processId)
         {
             var query = @"update Tradings set 
                                 MinPriceRead = @MinPriceRead,
                                 MinPriceReadAt = @MinPriceReadAt,
                                 UpdatedAt = @UpdatedAt
-                            where id = @Id";
+                            where id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 MinPriceRead = minPrice,
                 MinPriceReadAt = DateTimeOffset.Now,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
@@ -340,64 +363,75 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateRollbackStageCancellingOcoOrderAsync(int id)
+        private void EnsureAffectedExactlyOneRow(int affectedRows)
+        {
+            if (affectedRows != 1)
+            {
+                throw new InvalidOperationException($"Exceptected 1 affected row but {affectedRows}");
+            }
+        }
+
+        public async Task UpdateRollbackStageCancellingOcoOrderAsync(int id, string processId)
         {
             var query = @"update Tradings set
                                 Stage = @Stage,
                                 IsRollback = 1,
                                 UpdatedAt = @UpdatedAt
-                            where Id = @Id";
+                            where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.RollbackCancellingOcoOrder,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateRollbackStageCancelOcoOrderExecutedAsync(int id)
+        public async Task UpdateRollbackStageCancelOcoOrderExecutedAsync(int id, string processId)
         {
             var query = @"update Tradings set
                                 Stage = @Stage,
                                 UpdatedAt = @UpdatedAt
-                            where Id = @Id";
+                            where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.RollbackCancelOcoOrderExecuted,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
 
-        public async Task UpdateRollbackStageOcoOrderCancelledAsync(int id)
+        public async Task UpdateRollbackStageOcoOrderCancelledAsync(int id, string processId)
         {
             var query = @"update Tradings set
                                 Stage = @Stage,
                                 UpdatedAt = @UpdatedAt
-                            where Id = @Id";
+                            where Id = @Id and ProcessId = @ProcessId";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.RollbackCancelOcoOrderCancelled,
-                UpdatedAt = DateTimeOffset.Now
+                UpdatedAt = DateTimeOffset.Now,
+                ProcessId = processId
             };
 
             using (var db = CreateDbConnection())
             {
-                await db.ExecuteAsync(query, parameters);
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
             }
         }
     }

@@ -34,6 +34,22 @@ namespace TradingAgent.Models
 		public DateTimeOffset? UpdatedAt { get; set; }
 		public OrderKind? SellOrderKind { get; set; }
 		public bool IsRollback { get; set; }
+		public string ProcessId { get; set; }
 		public bool Active { get; set; }
+
+		public decimal TradeCompletedProfitPercentage
+		{
+			get
+			{
+				if (BuyPrice.HasValue && SellOrderExecutedPrice.HasValue && BuyPrice.Value > 0m)
+				{
+					var profit = SellOrderExecutedPrice.Value - BuyPrice.Value;
+
+					return profit / BuyPrice.Value * 100m;
+				}
+
+				return 0m;
+			}
+		}
 	}
 }

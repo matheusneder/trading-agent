@@ -17,8 +17,8 @@ namespace TradingAgent.Tests
 {
     public class TradeServiceTests
     {
-        private Mock<IBinancePrivateApiClient> binancePrivateApiClientMock = new Mock<IBinancePrivateApiClient>();
-        private Mock<IBinancePublicApiClient> binancePublicApiCLientMock = new Mock<IBinancePublicApiClient>();
+        private readonly Mock<IBinancePrivateApiClient> binancePrivateApiClientMock = new Mock<IBinancePrivateApiClient>();
+        private readonly Mock<IBinancePublicApiClient> binancePublicApiCLientMock = new Mock<IBinancePublicApiClient>();
         private readonly DbAdapter dbAdapter;
         private readonly BinanceApiAdapter binanceApiAdapter;
         private readonly AppConfig appConfig = AppConfig.ReadFromFile();
@@ -84,7 +84,7 @@ namespace TradingAgent.Tests
                     price = "0.909"
                 });
 
-            dbAdapter = new DbAdapter();
+            dbAdapter = new DbAdapter(AppSecrets.ReadFromFile());
             binanceApiAdapter = new BinanceApiAdapter(binancePrivateApiClientMock.Object, binancePublicApiCLientMock.Object);
         }
 

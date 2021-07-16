@@ -10,8 +10,8 @@ namespace TradingAgent.Tests
         [Fact]
         public async Task InsertNewOperationAsync_ThereIsAnotherTradingInExecution_Error()
         {
-            var dbAdapter = new DbAdapter();
-            var ex = await Assert.ThrowsAsync<TradingException>(async () => await dbAdapter.InsertNewOperationAsync("TCOINH", "TCOINT", 12));
+            var dbAdapter = new DbAdapter(AppSecrets.ReadFromFile());
+            var ex = await Assert.ThrowsAsync<TradingException>(async () => await dbAdapter.InsertNewOperationAsync("TCOINH", "TCOINT", 12, Guid.NewGuid().ToString()));
             Assert.Equal(TradingError.ThereIsAnotherTradingInExecution, ex.TradingError);
         }
     }

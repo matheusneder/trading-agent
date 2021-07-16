@@ -13,7 +13,7 @@ namespace TradingAgent.Tests
         public async Task GetAccountInformation_Success()
         {
             var appSecrets = AppSecrets.ReadFromFile();
-            var binanceApiAdapter = new BinanceApiAdapter(Startup.CreateBinancePrivateApiClient(appSecrets), Startup.CreateBinancePublicApiClient());
+            var binanceApiAdapter = new BinanceApiAdapter(Startup.CreateBinancePrivateApiClient(appSecrets), Startup.CreateBinancePublicApiClient(appSecrets));
             var accountInfo = await binanceApiAdapter.GetAccountInformationAsync();
             Assert.Contains(accountInfo.Balances, m => m.Asset == "BTC");
         }

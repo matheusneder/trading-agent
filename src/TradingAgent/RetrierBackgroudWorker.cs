@@ -63,6 +63,14 @@ namespace TradingAgent
             }
         }
 
+        private async Task<string> SwitchProcessIdAsync(Trading activeTrading)
+        {
+            string newProcessId = $"{Guid.NewGuid().ToString()}-rec";
+            await dbAdapter.UpdateTradingProcessIdAsync(activeTrading.Id, newProcessId);
+
+            return newProcessId;
+        }
+
         private async Task HandleIncompleteTradeAsync(Trading activeTrading)
         {
             logger.LogWarning("Found incomplete trading #{TradingId}, trying to resume it...", activeTrading.Id);
@@ -77,23 +85,23 @@ namespace TradingAgent
                     break;
                 case Stage.BuyOrderCreated:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step4RetriveBuyOrderDataAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step4RetriveBuyOrderDataAsync();
+                    await tradeService.Step4RetriveBuyOrderDataAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
                 case Stage.BuyOrderFilled:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step5CalcSellOrderParamsAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step5CalcSellOrderParamsAsync();
+                    await tradeService.Step5CalcSellOrderParamsAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
                 case Stage.ParametersCalculated:
                 case Stage.RollbackCancelOcoOrderCancelled:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step6CreateSellOrderAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step6CreateSellOrderAsync();
+                    await tradeService.Step6CreateSellOrderAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
                 case Stage.CreatingSellOrder:
                     await HandleIncompleteCreatingSellOrderAsync(activeTrading);
                     break;
                 case Stage.SellOrderCreated:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step8WatchSellOrderAndPriceAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step8WatchSellOrderAndPriceAsync();
+                    await tradeService.Step8WatchSellOrderAndPriceAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
                 case Stage.SellOrderFilled:
                     logger.LogError($"#{{TradingId}} Unexpected stage {{Stage}}", activeTrading.Id, activeTrading.Stage);
@@ -103,7 +111,7 @@ namespace TradingAgent
                     break;
                 case Stage.RollbackCancelOcoOrderExecuted:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step11RollbackCheckOcoCancelAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step11RollbackCheckOcoCancelAsync();
+                    await tradeService.Step11RollbackCheckOcoCancelAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
             }
         }
@@ -129,6 +137,8 @@ namespace TradingAgent
                         
                         try
                         {
+                            var newProcessId = await SwitchProcessIdAsync(activeTrading);
+
                             logger.LogWarning($"Trading #{{TradingId}}: Oco order still executing, requesting cancellation again!", activeTrading.Id); 
 
                             await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset);
@@ -136,7 +146,7 @@ namespace TradingAgent
                             logger.LogInformation($"Cancel request worked! Resuming #{{TradingId}}; Stage {{Stage}} :: " +
                                 $"{nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
 
-                            await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync();
+                            await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(newProcessId);
                         }
                         catch(Exception e)
                         {
@@ -149,7 +159,7 @@ namespace TradingAgent
                         logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: " +
                             $"{nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
 
-                        await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync();
+                        await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(await SwitchProcessIdAsync(activeTrading));
 
                         break;
                     default:
@@ -192,7 +202,7 @@ namespace TradingAgent
                         logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: " +
                             $"{nameof(TradeService.Step7UpdateSellOrderCreatedStageAsync)}", activeTrading.Id, activeTrading.Stage);
                         
-                        await tradeService.Step7UpdateSellOrderCreatedStageAsync();
+                        await tradeService.Step7UpdateSellOrderCreatedStageAsync(await SwitchProcessIdAsync(activeTrading));
                         
                         break;
                     default:
@@ -226,13 +236,16 @@ namespace TradingAgent
             var sellPrice = activeTrading.SellPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.SellPrice)} not null");
             var sellStopLimitPrice = activeTrading.SellStopLimitPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.SellStopLimitPrice)} not null");
             var rollbackPrice = activeTrading.RollbackPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.RollbackPrice)} not null");
-
+            
+            var newProcessId = await SwitchProcessIdAsync(activeTrading);
+            
             await dbAdapter.UpdateSellOrderParametersCalculatedStageAsync(activeTrading.Id,
                 sellPrice,
                 sellStopLimitPrice,
-                rollbackPrice);
+                rollbackPrice,
+                newProcessId);
 
-            await tradeService.Step6CreateSellOrderAsync();
+            await tradeService.Step6CreateSellOrderAsync(newProcessId);
         }
 
         private async Task HandleIncompleteCreatingBuyOrderAsync(Trading activeTrading)
@@ -255,7 +268,7 @@ namespace TradingAgent
                         logger.LogWarning("Trading #{TradingId} :: discarding trade due buy order status: {Status}", 
                             activeTrading.Id, buyOrder.Status);
                         
-                        await dbAdapter.UpdateTradeCompletedAndNotInitializedStageAsync(activeTrading.Id, abortReason: $"Buy order {buyOrder.Status}");
+                        await dbAdapter.UpdateTradeCompletedAndNotInitializedStageAsync(activeTrading.Id, abortReason: $"Buy order {buyOrder.Status}", await SwitchProcessIdAsync(activeTrading));
                         
                         break;
                     case "FILLED":
@@ -265,7 +278,7 @@ namespace TradingAgent
                         logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: " +
                             $"{nameof(TradeService.Step3UpdateOrderCreatedStageAsync)}", activeTrading.Id, activeTrading.Stage);
                         
-                        await tradeService.Step3UpdateOrderCreatedStageAsync();
+                        await tradeService.Step3UpdateOrderCreatedStageAsync(await SwitchProcessIdAsync(activeTrading));
                         
                         break;
                     default:
@@ -282,7 +295,7 @@ namespace TradingAgent
                     logger.LogWarning("Trading #{TradingId} :: discarding trade due requested to create buy order more than {OrderCreatingTimeoutSeconds} seconds ago but binance says that it not found.", activeTrading.Id, buyOrderCreatingTimeoutSeconds);
 
                     await dbAdapter.UpdateTradeCompletedAndNotInitializedStageAsync(activeTrading.Id,
-                        abortReason: $"Requested to create buy order more than {buyOrderCreatingTimeoutSeconds} seconds ago but binance says that it not found.");
+                        abortReason: $"Requested to create buy order more than {buyOrderCreatingTimeoutSeconds} seconds ago but binance says that it not found.", await SwitchProcessIdAsync(activeTrading));
                 }
                 else
                 {
