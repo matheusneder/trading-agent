@@ -10,7 +10,7 @@ namespace TradingAgent
 {
     public abstract class BinanceApiAdapterBase
     {
-        protected async Task HandleErrorsAsync(ApiException e, Action<int> errorHandler = null)
+        protected async Task HandleErrorsAsync(ApiException e, Func<int, bool> errorHandler = null)
         {
             CheckException(e);
 
@@ -19,9 +19,9 @@ namespace TradingAgent
                 var errorDto = await e.GetContentAsAsync<BinanceErrorDto>();
                 CheckCommonErrorCodes(errorDto.code);
 
-                if (errorHandler != null)
+                if (errorHandler != null && errorHandler.Invoke(errorDto.code))
                 {
-                    errorHandler.Invoke(errorDto.code);
+                    return; // error was handled
                 }
             }
 

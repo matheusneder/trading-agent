@@ -114,13 +114,7 @@ namespace TradingAgent
             {
                 bool orderNotFound = false;
 
-                await HandleErrorsAsync(e, code =>
-                {
-                    if(code == -2013) // Order does not exist.
-                    {
-                        orderNotFound = true;
-                    }
-                });
+                await HandleErrorsAsync(e, code => orderNotFound = code == -2013);
 
                 if (orderNotFound)
                 {
@@ -211,13 +205,7 @@ namespace TradingAgent
             {
                 bool orderNotFound = false;
 
-                await HandleErrorsAsync(e, code =>
-                {
-                    if (code == -2018) // Order list does not exist.
-                    {
-                        orderNotFound = true;
-                    }
-                });
+                await HandleErrorsAsync(e, code => orderNotFound = code == -2018);
 
                 if (orderNotFound)
                 {
