@@ -54,6 +54,9 @@ INSERT INTO [StopLossControl] (HoldAsset, [InitialAmount], [CreatedAt], [StopThr
 	VALUES (N'BUSD', 200, sysdatetimeoffset(), 190, sysdatetimeoffset())
 
 go
+IF OBJECT_ID (N'dbo.[Vw_Tradings]', N'U') IS NOT NULL  
+	DROP VIEW [Vw_Tradings]
+GO
 create view Vw_Tradings as
 select
 		Id,
@@ -88,6 +91,9 @@ select
 	from Tradings
 
 go
+IF OBJECT_ID (N'dbo.[SingleTradeAsForm]', N'U') IS NOT NULL  
+	DROP PROCEDURE [SingleTradeAsForm]
+GO
 create procedure SingleTradeAsForm @TradingId int as
 select 
     'Id' Field, (select convert(nvarchar(max), Id) from Vw_Tradings where Id = @TradingId) Val
