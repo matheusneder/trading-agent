@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.AccessControl;
 using System.Threading.Tasks;
 using TradingAgent.Models;
 
@@ -310,7 +311,6 @@ namespace TradingAgent
         public async Task Step8WatchSellOrderAndPriceAsync(string processId)
         {
             var holdAsset = appConfig.HoldAsset;
-            decimal estimatedFeesPercent = appConfig.EstimatedFeesPercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated, processId);
 
@@ -425,30 +425,50 @@ namespace TradingAgent
 
                 logger.LogInformation("Trading #{TradingId}. OCO completed!", activeTrading.Id);
 
-                Trading completedTrading = await dbAdapter.GetTradingAsync(activeTrading.Id);
-
-                logger.LogInformation("Trade profit: {TradeCompletedProfitPercentage}", completedTrading.TradeCompletedProfitPercentage);
-                
-                var profitMinusFeesPercentage = completedTrading.TradeCompletedProfitPercentage - estimatedFeesPercent;
-
-                if (profitMinusFeesPercentage > 0m)
-                {
-                    var stopThresholdIncrementPercentage = profitMinusFeesPercentage * 0.75m;
-
-                    logger.LogInformation("Trading #{TradingId}. Increasing StopThreshold by {StopThresholdIncrementPercentage}!", activeTrading.Id, stopThresholdIncrementPercentage);
-
-                    await dbAdapter.IncreaseStopThresholdAsync(holdAsset, stopThresholdIncrementPercentage);
-                }
-                else
-                {
-                    logger.LogInformation("Trading #{TradingId}. Skiping StopThreshold update due non profitable trading :/", activeTrading.Id);
-                }
+                await UpdateStopThresholdAsync(activeTrading.Id);
 
                 _ = KeepWatchingPriceAsync(activeTrading, processId);
             }
             else
             {
                 logger.LogInformation($"Skiping {nameof(Step8WatchSellOrderAndPriceAsync)}, there is no active order on Stage {Stage.SellOrderCreated}.");
+            }
+        }
+
+        private async Task UpdateStopThresholdAsync(int trandingId)
+        {
+            decimal estimatedFeesPercent = appConfig.EstimatedFeesPercent;
+            Trading completedTrading = await dbAdapter.GetTradingAsync(trandingId);
+            var sellOrderExecutedPrice = completedTrading.SellOrderExecutedPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.SellOrderExecutedPrice)} not null");
+            var tradeAssetQty = completedTrading.TradeAssetQty ?? throw new InvalidOperationException($"Expected {nameof(Trading.TradeAssetQty)} not null");
+            decimal tradeEarns = sellOrderExecutedPrice * tradeAssetQty - completedTrading.BuyOrderQuoteQty;
+
+            if(tradeEarns > 0m)
+            {
+                logger.LogInformation("Trading #{TradingId}. Completed trade had profits, earnin: {TradeEarns} {HoldAsset}", 
+                    completedTrading.Id, 
+                    tradeEarns, 
+                    completedTrading.HoldAsset);
+
+                var estimatedTradeFees = completedTrading.BuyOrderQuoteQty * (estimatedFeesPercent / 100);
+                var stopThreasholdIncrement = (tradeEarns - estimatedTradeFees) * 0.8m;
+
+                if(stopThreasholdIncrement > 0m)
+                {
+                    logger.LogInformation("Trading #{TradingId}. Incrementing stopThreashold by {StopThreasholdIncrement}", completedTrading.Id, stopThreasholdIncrement);
+                    
+                    await dbAdapter.IncreamentStopThresholdAsync(completedTrading.HoldAsset, stopThreasholdIncrement);
+                }
+                else
+                {
+                    logger.LogWarning("Trading #{TradingId}. " +
+                        "Skipping stopThreasholdIncrement due trade earns {TradeEarns} < estimated trade fees {EstimatedTradeFees}.",
+                            completedTrading.Id, tradeEarns, estimatedTradeFees);
+                }
+            }
+            else
+            {
+                logger.LogWarning("Trading #{TradingId}. Completed trade had loss: {TradeEarns} {HoldAsset}", completedTrading.Id, tradeEarns * -1, completedTrading.HoldAsset);
             }
         }
 

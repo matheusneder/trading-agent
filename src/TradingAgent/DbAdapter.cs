@@ -100,15 +100,15 @@ namespace TradingAgent
             }
         }
 
-        public async Task IncreaseStopThresholdAsync(string holdAsset, decimal percentage)
+        public async Task IncreamentStopThresholdAsync(string holdAsset, decimal stopThresholdIncrement)
         {
             using (var db = CreateDbConnection())
             {
-                EnsureAffectedExactlyOneRow(await db.ExecuteAsync("update StopLossControl set StopThreshold = StopThreshold * @StopThresholdIncrement, UpdatedAt = @UpdatedAt where HoldAsset = @HoldAsset",
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync("update StopLossControl set StopThreshold = StopThreshold + @StopThresholdIncrement, UpdatedAt = @UpdatedAt where HoldAsset = @HoldAsset",
                     new
                     {
                         HoldAsset = holdAsset,
-                        StopThresholdIncrement = percentage / 100m + 1m,
+                        StopThresholdIncrement = stopThresholdIncrement,
                         UpdatedAt = DateTimeOffset.Now
                     }));
             }
