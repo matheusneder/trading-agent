@@ -255,6 +255,7 @@ namespace TradingAgent
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
             var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
+            var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, processId: processId); 
 
@@ -272,8 +273,9 @@ namespace TradingAgent
 
                 if (activeTrading.IsRollback)
                 {
-                    sellPrice = PlusPercentage(activeTrading.BuyPrice.Value, estimatedFeesPercent);
+                    sellPrice = MinusPercentage(sellPrice, targetProfitPerTradePercent - estimatedFeesPercent);
                 }
+
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
@@ -321,6 +323,8 @@ namespace TradingAgent
                 decimal currentPrice = decimal.MaxValue;
 
                 bool shouldRollback(Trading t, decimal price) => !t.IsRollback && price <= t.RollbackPrice;
+                bool shouldUpgrade(Trading t, decimal price) => price >= t.UpgradePrice;
+
                 Task delayReadOrderTask = Task.CompletedTask;
                 int readConsecutiveStatusNullCount = 0;
 
@@ -345,6 +349,12 @@ namespace TradingAgent
                             if (shouldRollback(activeTrading, currentPrice))
                             {
                                 logger.LogInformation("Trading #{TradingId}. Rollback condition reached at current price {CurrentPrice}", activeTrading.Id, currentPrice);
+                                break;
+                            }
+                            
+                            if(shouldUpgrade(activeTrading, currentPrice))
+                            {
+                                logger.LogInformation("Trading #{TradingId}. Upgrade condition reached at current price {CurrentPrice}", activeTrading.Id, currentPrice);
                                 break;
                             }
 
@@ -379,7 +389,7 @@ namespace TradingAgent
 
                     if (isOcoOrderActive)
                     {
-                        logger.LogInformation("Trading #{TradingId}. Oco order still alive!", activeTrading.Id);
+                        logger.LogInformation("Trading #{TradingId}. Oco order alive!", activeTrading.Id);
 
                         if (shouldRollback(activeTrading, currentPrice))
                         {
