@@ -19,7 +19,7 @@ namespace TradingAgent.Models
             this.content = content;
         }
 
-        public override string Message => $"HttpStatusCode: {statusCode}; Contet: {content}";
+        public override string Message => $"{nameof(BinanceUnknowErrorException)} :: HttpStatusCode: {statusCode}; Content: {content}";
 
         protected BinanceUnknowErrorException(SerializationInfo info, StreamingContext context) : base(info, context)
         {

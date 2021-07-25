@@ -224,13 +224,14 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopLimitPrice, decimal rollbackPrice, string processId)
+        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopLimitPrice, decimal rollbackPrice, decimal upgradePrice, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
                                 SellPrice = @SellPrice,
                                 SellStopLimitPrice = @SellStopLimitPrice,
                                 RollbackPrice = @RollbackPrice,
+                                UpgradePrice = @UpgradePrice,
                                 UpdatedAt = @UpdatedAt
                               where Id = @Id and ProcessId = @ProcessId";
 
@@ -241,6 +242,7 @@ namespace TradingAgent
                 SellPrice = sellPrice,
                 SellStopLimitPrice = sellStopLimitPrice,
                 RollbackPrice = rollbackPrice,
+                UpgradePrice = upgradePrice,
                 UpdatedAt = DateTimeOffset.Now,
                 ProcessId = processId
             };

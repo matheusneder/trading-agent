@@ -235,6 +235,7 @@ namespace TradingAgent
 
             var sellPrice = activeTrading.SellPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.SellPrice)} not null");
             var sellStopLimitPrice = activeTrading.SellStopLimitPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.SellStopLimitPrice)} not null");
+            var upgradePrice = activeTrading.UpgradePrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.UpgradePrice)} not null");
             var rollbackPrice = activeTrading.RollbackPrice ?? throw new InvalidOperationException($"Expected {nameof(Trading.RollbackPrice)} not null");
             
             var newProcessId = await SwitchProcessIdAsync(activeTrading);
@@ -242,8 +243,9 @@ namespace TradingAgent
             await dbAdapter.UpdateSellOrderParametersCalculatedStageAsync(activeTrading.Id,
                 sellPrice,
                 sellStopLimitPrice,
-                rollbackPrice,
-                newProcessId);
+                rollbackPrice: rollbackPrice,
+                upgradePrice: upgradePrice,
+                processId: newProcessId);
 
             await tradeService.Step6CreateSellOrderAsync(newProcessId);
         }

@@ -20,6 +20,7 @@ namespace TradingAgent.Models
 		public decimal? TradeAssetQty { get; set; }
 		public decimal? SellPrice { get; set; }
 		public decimal? SellStopLimitPrice { get; set; }
+		public decimal? UpgradePrice { get; set; }
 		public decimal? RollbackPrice { get;set; }
 		public DateTimeOffset? SellOrderCreatedAt { get; set; }
 		public decimal? SellOrderFee { get; set; }

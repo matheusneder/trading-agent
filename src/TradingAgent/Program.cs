@@ -24,7 +24,7 @@ namespace TradingAgent
                     webBuilder.UseKestrel(serverOptions =>
                     {
                         serverOptions.AddServerHeader = false; 
-                        serverOptions.Listen(IPAddress.Any, 10874,
+                        serverOptions.Listen(IPAddress.Any, AppConfig.ReadFromFile().HttpsPort,
                             listenOptions =>
                             {
                                 listenOptions.UseHttps("mytvwhr.ddns.net.pfx",

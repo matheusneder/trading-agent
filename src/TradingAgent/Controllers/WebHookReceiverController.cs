@@ -13,6 +13,7 @@ namespace TradingAgent.Controllers
         private readonly ILogger logger;
         private readonly AppSecrets appSecrets;
         private readonly DbAdapter dbAdapter;
+        private static bool EnjBusdPrepared { get; set; } = false;
 
         public WebHookReceiverController(ILoggerFactory loggerFactory, AppSecrets appSecrets, DbAdapter dbAdapter)
         {
@@ -31,8 +32,16 @@ namespace TradingAgent.Controllers
 
             logger.LogInformation($"New request {nameof(TradeEnjBusd)}");
 
-            var request = new Request(null);
-            RequestProcessorBackgroundWorker.EnqueueRequest(request);
+            if (EnjBusdPrepared)
+            {
+                EnjBusdPrepared = false;
+                var request = new Request(null);
+                RequestProcessorBackgroundWorker.EnqueueRequest(request);
+            } 
+            else
+            {
+                logger.LogInformation("Skipping, not prepared to start a new trade yet.");
+            }
             
             return Ok();
         }
@@ -47,15 +56,14 @@ namespace TradingAgent.Controllers
 
             logger.LogInformation($"New request {nameof(TradeEnjBusdPrepareAsync)}");
 
-            // TODO: review
             if (!await dbAdapter.AnyActiveTradeAsync("BUSD"))
             {
-                logger.LogInformation("Preparing to go trade!!!");
-                TradeService.EnjBusdPrepared = true;
+                EnjBusdPrepared = true;
+                logger.LogInformation("Prepared to start a new trade!");
             }
             else
             {
-                logger.LogInformation("There is activetranding, skipping....");
+                logger.LogInformation("Skipping, currently already trading.");
             }
 
             return Ok();
