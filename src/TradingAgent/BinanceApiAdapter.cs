@@ -91,11 +91,28 @@ namespace TradingAgent
             return origClientOrderId;
         }
 
-        public async Task<Order> GetOrderAsync(int tradingId, string holdAsset, string tradeAsset, OrderKind orderKind)
+        public async Task<Order> GetOrderAsync(int tradingId, string holdAsset, string tradeAsset, OrderKind orderKind, string sellOrderBinanceIdSuffix = null)
         {
+            var origClientOrderId = GenerateClientOrderId(tradingId, orderKind);
+
+            if (sellOrderBinanceIdSuffix != null) 
+            {
+                switch (orderKind)
+                {
+                    case OrderKind.SellOcoStopLimitRollbackOrder:
+                    case OrderKind.SellOcoStopLimitOrder:
+                        origClientOrderId = $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}";
+                        break;
+                    case OrderKind.SellOcoLimitRollbackOrder:
+                    case OrderKind.SellOcoLimitOrder:
+                        origClientOrderId = $"TR-{tradingId}-LIMIT-{sellOrderBinanceIdSuffix}";
+                        break;
+                }
+            }
+
             try
             {
-                var dto = await binancePrivateApiClient.QueryOrderAsync($"{tradeAsset}{holdAsset}", GenerateClientOrderId(tradingId, orderKind));
+                var dto = await binancePrivateApiClient.QueryOrderAsync($"{tradeAsset}{holdAsset}", origClientOrderId);
 
                 return new Order() 
                 { 
