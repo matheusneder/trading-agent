@@ -41,7 +41,7 @@ namespace TradingAgent.Tests
                 {
                     new BinanceAccountInfoResultDto.BalanceDto()
                     {
-                        asset = "BUSD",
+                        asset = "BNB",
                         free = "200.000",
                         locked = "0"
                     }

@@ -145,23 +145,20 @@ namespace TradingAgent
             }
         }
 
-        public async Task CreateSellOrderAsync(int tradingId, string holdAsset, string tradeAsset, decimal tradeAssetQty, decimal sellPrice, decimal sellStopLimitPrice, bool isRollbackOrder)
+        public async Task CreateSellOrderAsync(int tradingId, string holdAsset, string tradeAsset, decimal tradeAssetQty, decimal sellPrice, decimal sellStopLimitPrice, string sellOrderBinanceIdSuffix)
         {
-            OrderKind listOrderKind = isRollbackOrder ? OrderKind.SellOcoRollbackOrder : OrderKind.SellOcoOrder;
-            OrderKind limitOrderKind = isRollbackOrder ? OrderKind.SellOcoLimitRollbackOrder : OrderKind.SellOcoLimitOrder;
-            OrderKind stopOrderKind = isRollbackOrder ? OrderKind.SellOcoStopLimitRollbackOrder : OrderKind.SellOcoStopLimitOrder;
-            
+           
             try
             {
                 await binancePrivateApiClient
                     .NewOcoAsync(
                         symbol: $"{tradeAsset}{holdAsset}",
-                        listClientOrderId: GenerateClientOrderId(tradingId, listOrderKind),
+                        listClientOrderId: $"TR-{tradingId}-LIST-{sellOrderBinanceIdSuffix}",
                         side: "SELL",
                         quantity: tradeAssetQty.ToString("0.####", CultureInfo.InvariantCulture),
-                        limitClientOrderId: GenerateClientOrderId(tradingId, limitOrderKind),
+                        limitClientOrderId: $"TR-{tradingId}-LIMIT-{sellOrderBinanceIdSuffix}",
                         price: sellPrice.ToString("0.####", CultureInfo.InvariantCulture),
-                        stopClientOrderId: GenerateClientOrderId(tradingId, stopOrderKind),
+                        stopClientOrderId: $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}",
                         stopPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture),
                         stopLimitPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture),
                         stopLimitTimeInForce: "GTC"
@@ -175,13 +172,13 @@ namespace TradingAgent
             }
         }
 
-        public async Task CancelOcoOrderAsync(int tradingId, string holdAsset, string tradeAsset)
+        public async Task CancelOcoOrderAsync(int tradingId, string holdAsset, string tradeAsset, string sellOrderBinanceIdSuffix)
         {
             try
             {
                 await binancePrivateApiClient.CancelOco(
                     symbol: $"{tradeAsset}{holdAsset}",
-                    listClientOrderId: GenerateClientOrderId(tradingId, OrderKind.SellOcoOrder));
+                    listClientOrderId: $"TR-{tradingId}-LIST-{sellOrderBinanceIdSuffix}");
             }
             catch(ApiException e)
             {
@@ -191,13 +188,11 @@ namespace TradingAgent
             }
         }
 
-        public async Task<string> GetOcoOrderStatusAsync(int tradingId, bool isRollbackOrder)
+        public async Task<string> GetOcoOrderStatusAsync(int tradingId, string sellOrderBinanceIdSuffix)
         {
-            OrderKind orderKind = isRollbackOrder ? OrderKind.SellOcoRollbackOrder : OrderKind.SellOcoOrder;
-
             try
             {
-                var dto = await binancePrivateApiClient.QueryOcoAsync(GenerateClientOrderId(tradingId, orderKind));
+                var dto = await binancePrivateApiClient.QueryOcoAsync($"TR-{tradingId}-LIST-{sellOrderBinanceIdSuffix}");
 
                 return dto.listOrderStatus;
             }

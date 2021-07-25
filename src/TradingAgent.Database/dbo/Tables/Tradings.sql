@@ -16,6 +16,7 @@
 	[RollbackPrice] DECIMAL(18, 9) NULL,
 	[UpgradePrice] DECIMAL(18, 9) NULL,
 	[SellOrderCreatedAt] DATETIMEOFFSET NULL,
+	[SellOrderBinanceIdSuffix] NCHAR(20) NULL,
 	[SellOrderFee] DECIMAL(18, 9) NULL,
 	[SellOrderLastReadAt] DATETIMEOFFSET NULL,
 	[MinPriceRead] DECIMAL(18, 9) NULL,

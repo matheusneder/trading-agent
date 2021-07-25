@@ -16,6 +16,7 @@ select
 		RollbackPrice,
 		UpgradePrice,
 		todatetimeoffset(dateadd(hour, -3, convert(datetime2, SellOrderCreatedAt, 1)), '-03:00') SellOrderCreatedAt,
+		SellOrderBinanceIdSuffix,
 		SellOrderFee,
 		todatetimeoffset(dateadd(hour, -3, convert(datetime2, SellOrderLastReadAt, 1)), '-03:00') SellOrderLastReadAt,
 		MinPriceRead,

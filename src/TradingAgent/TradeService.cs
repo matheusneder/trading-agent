@@ -39,6 +39,7 @@ namespace TradingAgent
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
             var stopLossPercent = appConfig.StopLossPercent;
+            var holdAssetToTradePercent = appConfig.HoldAssetToTradePercent;
 
             var processId = Guid.NewGuid().ToString();
             
@@ -58,7 +59,7 @@ namespace TradingAgent
                     logger.LogInformation(
                         $"sellStopQuoteQty >= stopTradingThreshold ({sellStopQuoteQtyOverTotalBalance} >= {stopTradingThreshold}); going to trade...");
 
-                    decimal buyOrderQuoteQty = MinusPercentage(holdAssetBalance, 0.5m);
+                    decimal buyOrderQuoteQty = MinusPercentage(holdAssetBalance * (holdAssetToTradePercent / 100), 0.5m);
 
                     logger.LogInformation("BuyOrderQuoteQty: {BuyOrderQuoteQty}", buyOrderQuoteQty);
 
@@ -267,7 +268,10 @@ namespace TradingAgent
                 }
 
                 logger.LogInformation("Creating sell order!");
-                await dbAdapter.UpdateSellOrderCreatingStageAsync(activeTrading.Id, processId);
+                
+                var sellOrderBinanceIdSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty).Substring(0, 20);
+
+                await dbAdapter.UpdateSellOrderCreatingStageAsync(activeTrading.Id, sellOrderBinanceIdSuffix, processId);
 
                 decimal sellPrice = activeTrading.SellPrice.Value;
 
@@ -279,7 +283,7 @@ namespace TradingAgent
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
-                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, sellPrice, activeTrading.SellStopLimitPrice.Value, activeTrading.IsRollback));
+                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, sellPrice, activeTrading.SellStopLimitPrice.Value, sellOrderBinanceIdSuffix));
 
                 await Step7UpdateSellOrderCreatedStageAsync(processId);
             }
@@ -363,7 +367,7 @@ namespace TradingAgent
                     }
                     
                     // watch order
-                    ocoStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.IsRollback);
+                    ocoStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
                     await dbAdapter.UpdateSellOrderReadTimeAsync(activeTrading.Id, processId);
 
                     if(ocoStatus == null)
@@ -494,7 +498,7 @@ namespace TradingAgent
                 logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!");
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
-                    await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, holdAsset, tradeAsset));
+                    await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.SellOrderBinanceIdSuffix));
 
                 await Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(processId);
             }
@@ -540,7 +544,7 @@ namespace TradingAgent
                 do
                 {
                     await delayTask;
-                    ocoStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, isRollbackOrder: false);
+                    ocoStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
                     delayTask = DelayAsync(2000);
 
                     if (ocoStatus == null)

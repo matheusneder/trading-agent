@@ -120,7 +120,7 @@ namespace TradingAgent
         {
             logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackCancellingOcoOrder)} stage has detected.");
 
-            var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.IsRollback);
+            var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
 
             if (sellOrderStatus != null)
             {
@@ -141,7 +141,7 @@ namespace TradingAgent
 
                             logger.LogWarning($"Trading #{{TradingId}}: Oco order still executing, requesting cancellation again!", activeTrading.Id); 
 
-                            await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset);
+                            await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, activeTrading.SellOrderBinanceIdSuffix);
 
                             logger.LogInformation($"Cancel request worked! Resuming #{{TradingId}}; Stage {{Stage}} :: " +
                                 $"{nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
@@ -181,7 +181,7 @@ namespace TradingAgent
 
             logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.CreatingSellOrder)} stage has detected.", activeTrading.Id);
 
-            var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.IsRollback);
+            var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
 
             if(sellOrderStatus != null)
             {

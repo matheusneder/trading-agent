@@ -82,8 +82,7 @@ namespace TradingAgent.Tests
             binancePrivateApiClientMock.Setup(m => m.QueryOcoAsync(It.IsAny<string>()))
                 .ThrowsAsync(apiException);
 
-            Assert.Null(await binanceApiAdapter.GetOcoOrderStatusAsync(1, true));
-            Assert.Null(await binanceApiAdapter.GetOcoOrderStatusAsync(1, false));
+            Assert.Null(await binanceApiAdapter.GetOcoOrderStatusAsync(1, "xpto"));
         }
     }
 }

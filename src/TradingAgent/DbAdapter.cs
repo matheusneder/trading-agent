@@ -299,19 +299,23 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateSellOrderCreatingStageAsync(int id, string processId)
+        public async Task UpdateSellOrderCreatingStageAsync(int id, string sellOrderBinanceIdSuffix, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
                                 SellOrderCreatedAt = @SellOrderCreatedAt,
+                                SellOrderBinanceIdSuffix = @SellOrderBinanceIdSuffix,
                                 UpdatedAt = @UpdatedAt
-                              where Id = @Id and ProcessId = @ProcessId";
+                              where Id = @Id and ProcessId = @ProcessId and 
+                                -- ensure new suffix for a new order
+                                (SellOrderBinanceIdSuffix is null or SellOrderBinanceIdSuffix <> @SellOrderBinanceIdSuffix)";
 
             var parameters = new
             {
                 Id = id,
                 Stage = Stage.CreatingSellOrder,
                 SellOrderCreatedAt = DateTimeOffset.Now,
+                SellOrderBinanceIdSuffix = sellOrderBinanceIdSuffix,
                 UpdatedAt = DateTimeOffset.Now,
                 ProcessId = processId
             };

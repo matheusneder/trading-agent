@@ -17,6 +17,7 @@ namespace TradingAgent
         public string HoldAsset { get; set; }
         public string TradeAsset { get; set; }
         public int HttpsPort { get; set; } = 5001;
+        public decimal HoldAssetToTradePercent { get; set; } = 100;
 
         public static AppConfig ReadFromFile()
         {
