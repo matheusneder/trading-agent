@@ -255,14 +255,14 @@ namespace TradingAgent
         {
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
-            var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
-            var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
+            //var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
+            //var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, processId: processId); 
 
             if (activeTrading != null)
             {
-                if (!(new Stage[] { Stage.RollbackCancelOcoOrderCancelled, Stage.ParametersCalculated }).Any(s => s == activeTrading.Stage))
+                if (!(new Stage[] { Stage.RollbackOrUpgradeCancelOcoOrderCancelled, Stage.ParametersCalculated }).Any(s => s == activeTrading.Stage))
                 {
                     throw new InvalidOperationException($"{nameof(Step6CreateSellOrderAsync)}: Invalid stage ({activeTrading.Stage})");
                 }
@@ -273,17 +273,17 @@ namespace TradingAgent
 
                 await dbAdapter.UpdateSellOrderCreatingStageAsync(activeTrading.Id, sellOrderBinanceIdSuffix, processId);
 
-                decimal sellPrice = activeTrading.SellPrice.Value;
+                //decimal sellPrice = activeTrading.SellPrice.Value;
 
-                if (activeTrading.IsRollback)
-                {
-                    sellPrice = MinusPercentage(sellPrice, targetProfitPerTradePercent - estimatedFeesPercent);
-                }
+                //if (activeTrading.IsRollback)
+                //{
+                //    sellPrice = MinusPercentage(sellPrice, targetProfitPerTradePercent - estimatedFeesPercent);
+                //}
 
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
-                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, sellPrice, activeTrading.SellStopLimitPrice.Value, sellOrderBinanceIdSuffix));
+                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, activeTrading.SellPrice.Value, activeTrading.SellStopLimitPrice.Value, sellOrderBinanceIdSuffix));
 
                 await Step7UpdateSellOrderCreatedStageAsync(processId);
             }
@@ -327,7 +327,7 @@ namespace TradingAgent
                 decimal currentPrice = decimal.MaxValue;
 
                 bool shouldRollback(Trading t, decimal price) => !t.IsRollback && price <= t.RollbackPrice;
-                bool shouldUpgrade(Trading t, decimal price) => price >= t.UpgradePrice;
+                bool shouldUpgrade(Trading t, decimal price) => !t.IsRollback && price >= t.UpgradePrice && /* TODO: fix this codesmell */ price != decimal.MaxValue;
 
                 Task delayReadOrderTask = Task.CompletedTask;
                 int readConsecutiveStatusNullCount = 0;
@@ -399,7 +399,16 @@ namespace TradingAgent
                         {
                             logger.LogInformation("Trading #{TradingId}. Rollingback!", activeTrading.Id);
 
-                            await Step9BeginRollbackAsync(processId);
+                            await Step9BeginRollbackOrUpgradeAsync(true, processId);
+
+                            return;
+                        }
+
+                        if (shouldUpgrade(activeTrading, currentPrice))
+                        {
+                            logger.LogInformation("Trading #{TradingId}. Upgrading!", activeTrading.Id);
+
+                            await Step9BeginRollbackOrUpgradeAsync(false, processId);
 
                             return;
                         }
@@ -484,55 +493,75 @@ namespace TradingAgent
             }
         }
 
-        public async Task Step9BeginRollbackAsync(string processId)
+        public async Task Step9BeginRollbackOrUpgradeAsync(bool isRollback /* assume is upgrade if false*/, string processId)
         {
             var holdAsset = appConfig.HoldAsset;
             var tradeAsset = appConfig.TradeAsset;
+            var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
+            var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
+            var upgradePricePercent = appConfig.UpgradePricePercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated);
 
             if (activeTrading != null)
             {
-                await dbAdapter.UpdateRollbackStageCancellingOcoOrderAsync(activeTrading.Id, processId);
+                if (isRollback) 
+                {
+                    decimal newSellPrice = MinusPercentage(activeTrading.SellPrice.Value, targetProfitPerTradePercent - estimatedFeesPercent);
+
+                    await dbAdapter.UpdateRollbackStageCancellingOcoOrderAsync(activeTrading.Id, newSellPrice, processId);
+                }
+                else
+                {
+                    // upgrade
+
+                    decimal newSellPrice = PlusPercentage(activeTrading.SellPrice.Value, upgradePricePercent);
+                    decimal newRollbackPrice = PlusPercentage(activeTrading.RollbackPrice.Value, upgradePricePercent);
+                    decimal newSellStopLimitPrice = PlusPercentage(activeTrading.SellStopLimitPrice.Value, upgradePricePercent);
+                    decimal newUpgradePrice = PlusPercentage(activeTrading.UpgradePrice.Value, upgradePricePercent);
+
+                    await dbAdapter
+                        .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
+                }
                 
                 logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!");
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
                     await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.SellOrderBinanceIdSuffix));
 
-                await Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(processId);
+                await Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(processId);
             }
             else
             {
-                logger.LogInformation($"Skiping {nameof(Step9BeginRollbackAsync)}, there is no active order on Stage {Stage.SellOrderCreated}.");
+                logger.LogInformation($"Skiping {nameof(Step9BeginRollbackOrUpgradeAsync)}, there is no active order on Stage {Stage.SellOrderCreated}.");
             }
         }
 
-        public async Task Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(string processId)
+        public async Task Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(string processId)
         {
             var holdAsset = appConfig.HoldAsset;
 
-            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackCancellingOcoOrder);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackOrUpgradeCancellingOcoOrder);
 
             if (activeTrading != null)
             {
-                await dbAdapter.UpdateRollbackStageCancelOcoOrderExecutedAsync(activeTrading.Id, processId);
+                await dbAdapter.UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(activeTrading.Id, processId);
 
                 logger.LogInformation($"Trading #{{TradingId}}. Cancel command executed!");
 
-                await Step11RollbackCheckOcoCancelAsync(processId);
+                await Step11RollbackOrUpgradeCheckOcoCancelAsync(processId);
             }
             else
             {
-                logger.LogInformation($"Skiping {nameof(Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}, there is no active order on Stage {Stage.RollbackCancellingOcoOrder}.");
+                logger.LogInformation($"Skiping {nameof(Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync)}, there is no active order on Stage {Stage.RollbackOrUpgradeCancellingOcoOrder}.");
             }
         }
 
-        public async Task Step11RollbackCheckOcoCancelAsync(string processId)
+        public async Task Step11RollbackOrUpgradeCheckOcoCancelAsync(string processId)
         {
             var holdAsset = appConfig.HoldAsset;
 
-            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackCancelOcoOrderExecuted);
+            var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.RollbackOrUpgradeCancelOcoOrderExecuted);
 
             if (activeTrading != null)
             {
@@ -567,14 +596,14 @@ namespace TradingAgent
                     }
                 } while (ocoStatus != "ALL_DONE");
 
-                await dbAdapter.UpdateRollbackStageOcoOrderCancelledAsync(activeTrading.Id, processId);
+                await dbAdapter.UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(activeTrading.Id, processId);
                 logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!");
 
                 await Step6CreateSellOrderAsync(processId);
             }
             else
             {
-                logger.LogInformation($"Skiping {nameof(Step11RollbackCheckOcoCancelAsync)}, there is no active order on Stage {Stage.SellOrderCreated}.");
+                logger.LogInformation($"Skiping {nameof(Step11RollbackOrUpgradeCheckOcoCancelAsync)}, there is no active order on Stage {Stage.SellOrderCreated}.");
             }
 
         }

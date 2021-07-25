@@ -15,6 +15,7 @@
 	[SellStopLimitPrice] DECIMAL(18, 9) NULL,
 	[RollbackPrice] DECIMAL(18, 9) NULL,
 	[UpgradePrice] DECIMAL(18, 9) NULL,
+	[UpgradeCount] INT NOT NULL DEFAULT 0,
 	[SellOrderCreatedAt] DATETIMEOFFSET NULL,
 	[SellOrderBinanceIdSuffix] NCHAR(20) NULL,
 	[SellOrderFee] DECIMAL(18, 9) NULL,

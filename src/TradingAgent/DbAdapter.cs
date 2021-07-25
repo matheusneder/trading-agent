@@ -377,9 +377,10 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateRollbackStageCancellingOcoOrderAsync(int id, string processId)
+        public async Task UpdateRollbackStageCancellingOcoOrderAsync(int id, decimal newSellPrice, string processId)
         {
             var query = @"update Tradings set
+                                SellPrice = @SellPrice,
                                 Stage = @Stage,
                                 IsRollback = 1,
                                 UpdatedAt = @UpdatedAt
@@ -388,7 +389,59 @@ namespace TradingAgent
             var parameters = new
             {
                 Id = id,
-                Stage = Stage.RollbackCancellingOcoOrder,
+                Stage = Stage.RollbackOrUpgradeCancellingOcoOrder,
+                UpdatedAt = DateTimeOffset.Now,
+                SellPrice = newSellPrice,
+                ProcessId = processId
+            };
+
+            using (var db = CreateDbConnection())
+            {
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
+            }
+        }
+
+        public async Task UpdateUpgradeStageCacellingOcoOrderAsync(int id, decimal newSellPrice, decimal newRollbackPrice, decimal newSellStopLimitPrice, decimal newUpgradePrice, string processId)
+        {
+            var query = @"update Tradings set
+                                SellPrice = @SellPrice,
+                                RollbackPrice = @RollbackPrice,
+                                SellStopLimitPrice = @SellStopLimitPrice,
+                                UpgradePrice = @UpgradePrice,
+                                Stage = @Stage,
+                                UpgradeCount = UpgradeCount + 1,
+                                UpdatedAt = @UpdatedAt
+                            where Id = @Id and ProcessId = @ProcessId";
+
+            var parameters = new
+            {
+                Id = id,
+                Stage = Stage.RollbackOrUpgradeCancellingOcoOrder,
+                UpdatedAt = DateTimeOffset.Now,
+                SellPrice = newSellPrice,
+                RollbackPrice = newRollbackPrice,
+                SellStopLimitPrice = newSellStopLimitPrice,
+                UpgradePrice = newUpgradePrice,
+                ProcessId = processId
+            };
+
+            using (var db = CreateDbConnection())
+            {
+                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
+            }
+        }
+
+        public async Task UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(int id, string processId)
+        {
+            var query = @"update Tradings set
+                                Stage = @Stage,
+                                UpdatedAt = @UpdatedAt
+                            where Id = @Id and ProcessId = @ProcessId";
+
+            var parameters = new
+            {
+                Id = id,
+                Stage = Stage.RollbackOrUpgradeCancelOcoOrderExecuted,
                 UpdatedAt = DateTimeOffset.Now,
                 ProcessId = processId
             };
@@ -399,7 +452,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateRollbackStageCancelOcoOrderExecutedAsync(int id, string processId)
+        public async Task UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(int id, string processId)
         {
             var query = @"update Tradings set
                                 Stage = @Stage,
@@ -409,28 +462,7 @@ namespace TradingAgent
             var parameters = new
             {
                 Id = id,
-                Stage = Stage.RollbackCancelOcoOrderExecuted,
-                UpdatedAt = DateTimeOffset.Now,
-                ProcessId = processId
-            };
-
-            using (var db = CreateDbConnection())
-            {
-                EnsureAffectedExactlyOneRow(await db.ExecuteAsync(query, parameters));
-            }
-        }
-
-        public async Task UpdateRollbackStageOcoOrderCancelledAsync(int id, string processId)
-        {
-            var query = @"update Tradings set
-                                Stage = @Stage,
-                                UpdatedAt = @UpdatedAt
-                            where Id = @Id and ProcessId = @ProcessId";
-
-            var parameters = new
-            {
-                Id = id,
-                Stage = Stage.RollbackCancelOcoOrderCancelled,
+                Stage = Stage.RollbackOrUpgradeCancelOcoOrderCancelled,
                 UpdatedAt = DateTimeOffset.Now,
                 ProcessId = processId
             };

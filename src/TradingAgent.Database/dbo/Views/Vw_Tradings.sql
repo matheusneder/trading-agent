@@ -15,6 +15,7 @@ select
 		SellStopLimitPrice,
 		RollbackPrice,
 		UpgradePrice,
+		UpgradeCount,
 		todatetimeoffset(dateadd(hour, -3, convert(datetime2, SellOrderCreatedAt, 1)), '-03:00') SellOrderCreatedAt,
 		SellOrderBinanceIdSuffix,
 		SellOrderFee,

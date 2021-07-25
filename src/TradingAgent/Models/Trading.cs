@@ -21,6 +21,7 @@ namespace TradingAgent.Models
 		public decimal? SellPrice { get; set; }
 		public decimal? SellStopLimitPrice { get; set; }
 		public decimal? UpgradePrice { get; set; }
+		public int UpgradeCount { get; set; }
 		public decimal? RollbackPrice { get;set; }
 		public DateTimeOffset? SellOrderCreatedAt { get; set; }
 		public string SellOrderBinanceIdSuffix { get; set; }

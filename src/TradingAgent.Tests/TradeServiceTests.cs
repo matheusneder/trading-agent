@@ -204,6 +204,103 @@ namespace TradingAgent.Tests
             Assert.Equal(OrderKind.SellOcoLimitRollbackOrder, trading.SellOrderKind);
         }
 
+        [Fact]
+        public async Task ExecuteUpgrade_Success()
+        {
+            var holdAsset = appConfig.HoldAsset;
+
+            SetupQueryOco(queryOcoOnce: false);
+
+            decimal increment = 0.001m;
+            decimal price = 0.909m + increment;
+
+            var symbolPriceTickerResult = new SymbolPriceTickerResultDto()
+            {
+                symbol = "LTC",
+                price = price.ToString("G", CultureInfo.InvariantCulture)
+            };
+
+            binancePublicApiCLientMock.Setup(m => m.SymbolPriceTicker(It.IsAny<string>()))
+                .Callback(() =>
+                {
+                    var newPrice = price + increment;
+
+                    if (newPrice > 0)
+                    {
+                        price = newPrice;
+                    }
+                    else
+                    {
+                        price = 0m;
+                    }
+
+                    symbolPriceTickerResult.price = price.ToString("G", CultureInfo.InvariantCulture);
+                })
+                .ReturnsAsync(symbolPriceTickerResult);
+
+            var tradeService = CreateTradeService();
+            await dbAdapter.InactivateAllAsync(holdAsset);
+            int tradingId = await tradeService.Step1CheckConditionsThenRegisterANewTradeAsync();
+            await Task.Delay(10);
+
+            var trading = await dbAdapter.GetTradingAsync(tradingId);
+
+            Assert.False(trading.IsRollback);
+            Assert.Equal(Stage.SellOrderFilled, trading.Stage);
+            Assert.False(trading.Active);
+            Assert.True(trading.UpgradeCount > 0);
+            Assert.Equal(OrderKind.SellOcoLimitOrder, trading.SellOrderKind);
+        }
+
+        [Fact]
+        public async Task ExecuteUpgradeThenRollback_Success()
+        {
+            var holdAsset = appConfig.HoldAsset;
+
+            SetupQueryOco(queryOcoOnce: false);
+
+            decimal increment = 0.05m;
+            decimal price = 0.909m + increment;
+
+            var symbolPriceTickerResult = new SymbolPriceTickerResultDto()
+            {
+                symbol = "LTC",
+                price = price.ToString("G", CultureInfo.InvariantCulture)
+            };
+
+            binancePublicApiCLientMock.Setup(m => m.SymbolPriceTicker(It.IsAny<string>()))
+                .Callback(() =>
+                {
+                    var newPrice = price + increment;
+
+                    if (newPrice > 0)
+                    {
+                        price = newPrice;
+                        increment = -0.50m;
+                    }
+                    else
+                    {
+                        price = 0m;
+                    }
+
+                    symbolPriceTickerResult.price = price.ToString("G", CultureInfo.InvariantCulture);
+                })
+                .ReturnsAsync(symbolPriceTickerResult);
+
+            var tradeService = CreateTradeService();
+            await dbAdapter.InactivateAllAsync(holdAsset);
+            int tradingId = await tradeService.Step1CheckConditionsThenRegisterANewTradeAsync();
+            await Task.Delay(10);
+
+            var trading = await dbAdapter.GetTradingAsync(tradingId);
+
+            Assert.True(trading.IsRollback);
+            Assert.Equal(Stage.SellOrderFilled, trading.Stage);
+            Assert.False(trading.Active);
+            Assert.True(trading.UpgradeCount > 0);
+            Assert.Equal(OrderKind.SellOcoLimitRollbackOrder, trading.SellOrderKind);
+        }
+
         private void SetupQueryOco(bool queryOcoOnce)
         {
             var queryOcoResult = new BinanceQueryOcoResultDto()
@@ -221,9 +318,17 @@ namespace TradingAgent.Tests
             binancePrivateApiClientMock.Setup(m => m.QueryOcoAsync(It.IsAny<string>()))
                 .Callback(() =>
                 {
-                    if (count >= 2)
+                    if (count >= 3)
                     {
                         queryOcoResult.listOrderStatus = "ALL_DONE";
+                        count = 0;
+                    }
+                    else
+                    {
+                        if (!queryOcoOnce)
+                        {
+                            queryOcoResult.listOrderStatus = "EXECUTING";
+                        }
                     }
 
                     count++;

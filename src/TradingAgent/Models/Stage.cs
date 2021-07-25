@@ -15,9 +15,9 @@ namespace TradingAgent.Models
         CreatingSellOrder = 6,
         SellOrderCreated = 7,
         SellOrderFilled = 8,
-        RollbackCancellingOcoOrder = 9,
-        RollbackCancelOcoOrderExecuted = 10,
-        RollbackCancelOcoOrderCancelled = 11,
+        RollbackOrUpgradeCancellingOcoOrder = 9,
+        RollbackOrUpgradeCancelOcoOrderExecuted = 10,
+        RollbackOrUpgradeCancelOcoOrderCancelled = 11,
         CompletedAndNotInitialized = 99
     }
 }

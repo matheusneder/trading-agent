@@ -92,7 +92,7 @@ namespace TradingAgent
                     await tradeService.Step5CalcSellOrderParamsAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
                 case Stage.ParametersCalculated:
-                case Stage.RollbackCancelOcoOrderCancelled:
+                case Stage.RollbackOrUpgradeCancelOcoOrderCancelled:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step6CreateSellOrderAsync)}", activeTrading.Id, activeTrading.Stage);
                     await tradeService.Step6CreateSellOrderAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
@@ -106,19 +106,19 @@ namespace TradingAgent
                 case Stage.SellOrderFilled:
                     logger.LogError($"#{{TradingId}} Unexpected stage {{Stage}}", activeTrading.Id, activeTrading.Stage);
                     break;
-                case Stage.RollbackCancellingOcoOrder:
+                case Stage.RollbackOrUpgradeCancellingOcoOrder:
                     await HandleIncompleteRollbackCancellingOcoOrderAsync(activeTrading);
                     break;
-                case Stage.RollbackCancelOcoOrderExecuted:
-                    logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step11RollbackCheckOcoCancelAsync)}", activeTrading.Id, activeTrading.Stage);
-                    await tradeService.Step11RollbackCheckOcoCancelAsync(await SwitchProcessIdAsync(activeTrading));
+                case Stage.RollbackOrUpgradeCancelOcoOrderExecuted:
+                    logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step11RollbackOrUpgradeCheckOcoCancelAsync)}", activeTrading.Id, activeTrading.Stage);
+                    await tradeService.Step11RollbackOrUpgradeCheckOcoCancelAsync(await SwitchProcessIdAsync(activeTrading));
                     break;
             }
         }
 
         private async Task HandleIncompleteRollbackCancellingOcoOrderAsync(Trading activeTrading)
         {
-            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackCancellingOcoOrder)} stage has detected.");
+            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackOrUpgradeCancellingOcoOrder)} stage has detected.");
 
             var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
 
@@ -144,22 +144,22 @@ namespace TradingAgent
                             await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, activeTrading.SellOrderBinanceIdSuffix);
 
                             logger.LogInformation($"Cancel request worked! Resuming #{{TradingId}}; Stage {{Stage}} :: " +
-                                $"{nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
+                                $"{nameof(TradeService.Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
 
-                            await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(newProcessId);
+                            await tradeService.Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(newProcessId);
                         }
                         catch(Exception e)
                         {
-                            logger.LogWarning(e, $"Trading #{{TradingId}}: Exception has ocurred while trying to cacel order/resume {nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id);
+                            logger.LogWarning(e, $"Trading #{{TradingId}}: Exception has ocurred while trying to cacel order/resume {nameof(TradeService.Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync)}", activeTrading.Id);
                         }
                         
                         break;
                     case "ALL_DONE":
 
                         logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: " +
-                            $"{nameof(TradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
+                            $"{nameof(TradeService.Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync)}", activeTrading.Id, activeTrading.Stage);
 
-                        await tradeService.Setp10UpdateRollbackStageCancelOcoOrderExecutedAsync(await SwitchProcessIdAsync(activeTrading));
+                        await tradeService.Setp10UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(await SwitchProcessIdAsync(activeTrading));
 
                         break;
                     default:
