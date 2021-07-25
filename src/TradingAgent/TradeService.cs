@@ -422,10 +422,10 @@ namespace TradingAgent
                 } while (isOcoOrderActive);
 
                 var ocoStopLimitOrderKind = activeTrading.IsRollback ? OrderKind.SellOcoStopLimitRollbackOrder :  OrderKind.SellOcoStopLimitOrder;
-                var ocoStopLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoStopLimitOrderKind);
+                var ocoStopLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoStopLimitOrderKind, sellOrderBinanceIdSuffix: activeTrading.SellOrderBinanceIdSuffix);
 
                 var ocoLimitOrderKind = activeTrading.IsRollback ? OrderKind.SellOcoLimitRollbackOrder : OrderKind.SellOcoLimitOrder;
-                var ocoLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoLimitOrderKind);
+                var ocoLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoLimitOrderKind, sellOrderBinanceIdSuffix: activeTrading.SellOrderBinanceIdSuffix);
 
                 Order executedOrder;
 
