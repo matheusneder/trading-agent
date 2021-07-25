@@ -372,7 +372,9 @@ namespace TradingAgent
 
                     if(ocoStatus == null)
                     {
-                        if(readConsecutiveStatusNullCount > 2)
+                        logger.LogInformation("Trading #{TradingId}. Read NULL Oco order (not found). Assume it is being created (I hope) ... Will fail if read NULL more than 2 times.", activeTrading.Id);
+
+                        if (readConsecutiveStatusNullCount > 2)
                         {
                             throw new InvalidOperationException($"Trading #{activeTrading.Id}. Oco status null!");
                         }
