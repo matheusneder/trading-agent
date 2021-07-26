@@ -223,7 +223,7 @@ namespace TradingAgent
             var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
             var stopLossPercent = appConfig.StopLossPercent;
             var rollbackPricePercent = appConfig.RollbackPricePercent;
-            var upgradePricePercent = appConfig.UpgradePricePercent;
+            var upgradePricePercent = appConfig.UpgradePriceTriggerPercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.BuyOrderFilled, processId);
 
@@ -501,7 +501,7 @@ namespace TradingAgent
             var tradeAsset = appConfig.TradeAsset;
             var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
             var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
-            var upgradePricePercent = appConfig.UpgradePricePercent;
+            var upgradePriceIncrementPercent = appConfig.UpgradePriceIncrementPercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated);
 
@@ -516,11 +516,26 @@ namespace TradingAgent
                 else
                 {
                     // upgrade
+                    decimal oldSellPrice = activeTrading.SellPrice.Value;
+                    decimal newSellPrice = PlusPercentage(oldSellPrice, upgradePriceIncrementPercent);
+                    decimal incrementAmount = newSellPrice - oldSellPrice;
+                    decimal newRollbackPrice = activeTrading.RollbackPrice.Value; // do not change
+                    decimal newSellStopLimitPrice;
 
-                    decimal newSellPrice = PlusPercentage(activeTrading.SellPrice.Value, upgradePricePercent);
-                    decimal newRollbackPrice = PlusPercentage(activeTrading.RollbackPrice.Value, upgradePricePercent);
-                    decimal newSellStopLimitPrice = PlusPercentage(activeTrading.SellStopLimitPrice.Value, upgradePricePercent);
-                    decimal newUpgradePrice = PlusPercentage(activeTrading.UpgradePrice.Value, upgradePricePercent);
+                    if (activeTrading.SellStopLimitPrice.Value < activeTrading.BuyPrice.Value)
+                    {
+                        newSellStopLimitPrice = activeTrading.BuyPrice.Value;
+                    }
+                    else if(activeTrading.UpgradeCount > 1)
+                    {
+                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + incrementAmount;
+                    }
+                    else
+                    {
+                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + (newSellPrice * appConfig.EstimatedFeesPercent / 100);
+                    }
+                    
+                    decimal newUpgradePrice = activeTrading.UpgradePrice.Value + incrementAmount;
 
                     await dbAdapter
                         .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);

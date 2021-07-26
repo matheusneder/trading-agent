@@ -67,7 +67,7 @@ namespace TradingAgent.Tests
                 });
 
             binancePrivateApiClientMock.Setup(m => m.QueryOrderAsync(It.IsAny<string>(),
-                It.IsRegex("^SellOcoStopLimit(Rollback)?Order-[0-9]+$")))
+                It.IsRegex("^TR-[0-9]+-STOP-[a-z0-9]+$")))
                 .ReturnsAsync(new BinanceQueryOrderResultDto()
                 {
                     executedQty = "0.00000000",

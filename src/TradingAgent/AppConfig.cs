@@ -12,7 +12,8 @@ namespace TradingAgent
         public decimal TargetProfitPerTradePercent { get; set; } = -1;
         public decimal StopLossPercent { get; set; } = -1;
         public decimal RollbackPricePercent { get; set; } = -1;
-        public decimal UpgradePricePercent { get; set; } = -1;
+        public decimal UpgradePriceTriggerPercent { get; set; } = -1;
+        public decimal UpgradePriceIncrementPercent { get; set; } = -1;
         public decimal EstimatedFeesPercent { get; set; } = -1;
         public string HoldAsset { get; set; }
         public string TradeAsset { get; set; }
@@ -36,7 +37,8 @@ namespace TradingAgent
 
             if (string.IsNullOrEmpty(result.HoldAsset) || string.IsNullOrEmpty(result.TradeAsset) || 
                 result.TargetProfitPerTradePercent == -1 || result.StopLossPercent == -1 || 
-                result.RollbackPricePercent == -1 || result.EstimatedFeesPercent == -1 || result.UpgradePricePercent == -1)
+                result.RollbackPricePercent == -1 || result.EstimatedFeesPercent == -1 || 
+                result.UpgradePriceTriggerPercent == -1 || result.UpgradePriceIncrementPercent == -1)
             {
                 throw new InvalidOperationException("Missing configuration");
             }
