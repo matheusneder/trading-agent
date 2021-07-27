@@ -538,7 +538,7 @@ namespace TradingAgent
                             incrementAmount / 2;
                     }
 
-                    decimal newUpgradePrice = newSellStopLimitPrice + (newSellPrice - newSellStopLimitPrice) * 0.65m;
+                    decimal newUpgradePrice = newSellStopLimitPrice + Math.Max((newSellPrice - newSellStopLimitPrice) * 0.65m, incrementAmount);
 
                     await dbAdapter
                         .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
