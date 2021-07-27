@@ -107,7 +107,7 @@ namespace TradingAgent
                     logger.LogError($"#{{TradingId}} Unexpected stage {{Stage}}", activeTrading.Id, activeTrading.Stage);
                     break;
                 case Stage.RollbackOrUpgradeCancellingOcoOrder:
-                    await HandleIncompleteRollbackCancellingOcoOrderAsync(activeTrading);
+                    await HandleIncompleteRollbackOrUpgradeCancellingOcoOrderAsync(activeTrading);
                     break;
                 case Stage.RollbackOrUpgradeCancelOcoOrderExecuted:
                     logger.LogInformation($"Resuming #{{TradingId}}; Stage {{Stage}} :: {nameof(TradeService.Step11RollbackOrUpgradeCheckOcoCancelAsync)}", activeTrading.Id, activeTrading.Stage);
@@ -116,7 +116,7 @@ namespace TradingAgent
             }
         }
 
-        private async Task HandleIncompleteRollbackCancellingOcoOrderAsync(Trading activeTrading)
+        private async Task HandleIncompleteRollbackOrUpgradeCancellingOcoOrderAsync(Trading activeTrading)
         {
             logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackOrUpgradeCancellingOcoOrder)} stage has detected.");
 
