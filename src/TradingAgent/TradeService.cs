@@ -517,28 +517,38 @@ namespace TradingAgent
                 else
                 {
                     // upgrade
+                    decimal buyPrice = activeTrading.BuyPrice.Value;
                     decimal oldSellPrice = activeTrading.SellPrice.Value;
                     decimal newSellPrice = PlusPercentage(oldSellPrice, upgradePriceIncrementPercent);
                     decimal incrementAmount = newSellPrice - oldSellPrice;
                     decimal newRollbackPrice = activeTrading.RollbackPrice.Value; // do not change
-                    decimal newSellStopLimitPrice;
+                    decimal newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value; // do not change at first
+                    decimal newUpgradePrice = activeTrading.UpgradePrice.Value + incrementAmount;
 
-                    if (activeTrading.SellStopLimitPrice.Value < activeTrading.BuyPrice.Value)
+                    if(newSellPrice > PlusPercentage(buyPrice, appConfig.StopLossPercent + appConfig.HoldAssetToTradePercent))
                     {
-                        newSellStopLimitPrice = activeTrading.BuyPrice.Value;
-                    }
-                    else if(activeTrading.UpgradeCount > 1)
-                    {
-                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + MinusPercentage(incrementAmount,
+                        logger.LogInformation($"Trading #{{TradingId}}. Reached zero loss risk zone on Upgrade {{UpgradeCount}}!", activeTrading.Id, activeTrading.UpgradeCount);
+
+                        var oldSellStopLimitPrice = newSellStopLimitPrice;
+
+                        newSellStopLimitPrice = newSellStopLimitPrice + MinusPercentage(incrementAmount,
                             Math.Min(activeTrading.UpgradeCount, 25));
-                    }
-                    else
-                    {
-                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + (newSellPrice * appConfig.EstimatedFeesPercent / 100) + 
-                            incrementAmount / 2;
-                    }
 
-                    decimal newUpgradePrice = Math.Max((newSellStopLimitPrice + (newSellPrice - newSellStopLimitPrice) * 0.65m), activeTrading.UpgradePrice.Value + incrementAmount);
+                        if(newSellStopLimitPrice < buyPrice)
+                        {
+                            newSellStopLimitPrice = PlusPercentage(buyPrice, estimatedFeesPercent);
+
+                            logger.LogInformation($"Trading #{{TradingId}}. {nameof(Trading.SellStopLimitPrice)} was smaller than {nameof(Trading.BuyPrice)}. Incresing it " +
+                                $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
+                                activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
+                        }
+                        else
+                        {
+                            logger.LogInformation($"Trading #{{TradingId}}. Incresing {nameof(Trading.SellStopLimitPrice)} " +
+                                $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
+                                activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
+                        }
+                    }
 
                     await dbAdapter
                         .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
