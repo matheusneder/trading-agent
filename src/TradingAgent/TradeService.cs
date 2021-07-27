@@ -521,21 +521,18 @@ namespace TradingAgent
                     decimal oldSellPrice = activeTrading.SellPrice.Value;
                     decimal newSellPrice = PlusPercentage(oldSellPrice, upgradePriceIncrementPercent);
                     decimal incrementAmount = newSellPrice - oldSellPrice;
-                    decimal newRollbackPrice = activeTrading.RollbackPrice.Value; // do not change
-                    decimal newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value; // do not change at first
+                    decimal newRollbackPrice = activeTrading.RollbackPrice.Value; // do not change ever
+                    decimal newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value; // do not change until sellPrice get the same distance as start sellPrice to start SellStopLimitPrice
                     decimal newUpgradePrice = activeTrading.UpgradePrice.Value + incrementAmount;
 
                     if(newSellPrice > PlusPercentage(buyPrice, appConfig.StopLossPercent + appConfig.HoldAssetToTradePercent))
                     {
-                        logger.LogInformation($"Trading #{{TradingId}}. Reached zero loss risk zone on Upgrade {{UpgradeCount}}!", activeTrading.Id, activeTrading.UpgradeCount);
-
                         var oldSellStopLimitPrice = newSellStopLimitPrice;
-
-                        newSellStopLimitPrice = newSellStopLimitPrice + MinusPercentage(incrementAmount,
-                            Math.Min(activeTrading.UpgradeCount, 25));
-
-                        if(newSellStopLimitPrice < buyPrice)
+                                               
+                        if(newSellStopLimitPrice < PlusPercentage(buyPrice, estimatedFeesPercent))
                         {
+                            logger.LogInformation($"Trading #{{TradingId}}. Reached zero loss risk zone on Upgrade {{UpgradeCount}}!", activeTrading.Id, activeTrading.UpgradeCount);
+
                             newSellStopLimitPrice = PlusPercentage(buyPrice, estimatedFeesPercent);
 
                             logger.LogInformation($"Trading #{{TradingId}}. {nameof(Trading.SellStopLimitPrice)} was smaller than {nameof(Trading.BuyPrice)}. Incresing it " +
@@ -544,6 +541,9 @@ namespace TradingAgent
                         }
                         else
                         {
+                            newSellStopLimitPrice = PlusPercentage(newSellStopLimitPrice,
+                                MinusPercentage(upgradePriceIncrementPercent, Math.Min(activeTrading.UpgradeCount / 2, 25)));
+
                             logger.LogInformation($"Trading #{{TradingId}}. Incresing {nameof(Trading.SellStopLimitPrice)} " +
                                 $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
                                 activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
