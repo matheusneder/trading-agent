@@ -613,10 +613,25 @@ namespace TradingAgent
                     }
                 } while (ocoStatus != "ALL_DONE");
 
-                await dbAdapter.UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(activeTrading.Id, processId);
-                logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!");
+                var ocoLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoLimitOrder, activeTrading.SellOrderBinanceIdSuffix);
+                var ocoStoptOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoStopLimitOrder, activeTrading.SellOrderBinanceIdSuffix);
 
-                await Step6CreateSellOrderAsync(processId);
+                // Ensure order cancelled
+                if (ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "CANCELED")
+                {
+                    await dbAdapter.UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(activeTrading.Id, processId);
+                    logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!");
+
+                    await Step6CreateSellOrderAsync(processId);
+                }
+                else
+                {
+                    logger.LogWarning($"Trading #{activeTrading.Id}. Order cancellation failed: Sounds it has been executed before cancel.", activeTrading.Id);
+                    
+                    await dbAdapter.UpdateSellOrderCreatedStageAsync(activeTrading.Id, processId);
+                    
+                    await Step8WatchSellOrderAndPriceAsync(processId);
+                }
             }
             else
             {
