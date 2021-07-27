@@ -534,20 +534,16 @@ namespace TradingAgent
                             logger.LogInformation($"Trading #{{TradingId}}. Reached zero loss risk zone on Upgrade {{UpgradeCount}}!", activeTrading.Id, activeTrading.UpgradeCount);
 
                             newSellStopLimitPrice = PlusPercentage(buyPrice, estimatedFeesPercent);
-
-                            logger.LogInformation($"Trading #{{TradingId}}. {nameof(Trading.SellStopLimitPrice)} was smaller than {nameof(Trading.BuyPrice)}. Incresing it " +
-                                $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
-                                activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
                         }
                         else
                         {
                             newSellStopLimitPrice = PlusPercentage(newSellStopLimitPrice,
                                 MinusPercentage(upgradePriceIncrementPercent, Math.Min(activeTrading.UpgradeCount / 2, 25)));
-
-                            logger.LogInformation($"Trading #{{TradingId}}. Incresing {nameof(Trading.SellStopLimitPrice)} " +
-                                $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
-                                activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
                         }
+
+                        logger.LogInformation($"Trading #{{TradingId}}. Incresing {nameof(Trading.SellStopLimitPrice)} " +
+                            $"from {{OldSellStopLimitPrice}} to {{NewSellStopLimitPrice}} on Upgrade #{{UpgradeCount}}",
+                            activeTrading.Id, oldSellStopLimitPrice, newSellStopLimitPrice, activeTrading.UpgradeCount);
                     }
 
                     await dbAdapter
