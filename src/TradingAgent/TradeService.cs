@@ -502,6 +502,7 @@ namespace TradingAgent
             var targetProfitPerTradePercent = appConfig.TargetProfitPerTradePercent;
             var estimatedFeesPercent = appConfig.EstimatedFeesPercent;
             var upgradePriceIncrementPercent = appConfig.UpgradePriceIncrementPercent;
+            var upgradePriceTriggerPercent = appConfig.UpgradePriceTriggerPercent;
 
             var activeTrading = await dbAdapter.GetActiveTradingAsync(holdAsset, Stage.SellOrderCreated);
 
@@ -528,14 +529,16 @@ namespace TradingAgent
                     }
                     else if(activeTrading.UpgradeCount > 1)
                     {
-                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + incrementAmount;
+                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + MinusPercentage(incrementAmount,
+                            Math.Min(activeTrading.UpgradeCount, 25));
                     }
                     else
                     {
-                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + (newSellPrice * appConfig.EstimatedFeesPercent / 100);
+                        newSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value + (newSellPrice * appConfig.EstimatedFeesPercent / 100) + 
+                            incrementAmount / 2;
                     }
-                    
-                    decimal newUpgradePrice = activeTrading.UpgradePrice.Value + incrementAmount;
+
+                    decimal newUpgradePrice = newSellStopLimitPrice + (newSellPrice - newSellStopLimitPrice) * 0.65m;
 
                     await dbAdapter
                         .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
