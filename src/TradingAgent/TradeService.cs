@@ -20,6 +20,8 @@ namespace TradingAgent
         private const int WatchPriceInterval = 2000;
         private const int WatchOrderInterval = 30000;
         private static readonly int WatchPriceMaxIterations = Convert.ToInt32(Math.Round((double)WatchOrderInterval / (double)WatchPriceInterval));
+        private const decimal BinanceMinNotional = 10m;
+        private const decimal MinNotionalPercentageIncrement = 20m;
 
         public bool SkipDelays { get; set; } = false; // for test purposes only
 
@@ -60,12 +62,27 @@ namespace TradingAgent
                         $"sellStopQuoteQty >= stopTradingThreshold ({sellStopQuoteQtyOverTotalBalance} >= {stopTradingThreshold}); going to trade...");
 
                     decimal buyOrderQuoteQty = MinusPercentage(holdAssetBalance * (holdAssetToTradePercent / 100), 0.5m);
+                    var minNotional = PlusPercentage(BinanceMinNotional, MinNotionalPercentageIncrement);
 
-                    logger.LogInformation("BuyOrderQuoteQty: {BuyOrderQuoteQty}", buyOrderQuoteQty);
+                    if (buyOrderQuoteQty < minNotional)
+                    {
+                        logger.LogWarning($"{nameof(buyOrderQuoteQty)} < {nameof(BinanceMinNotional)}. Skipping trade.");
+                    }
+                    else
+                    {
+                        if (await dbAdapter.IsTradeMinimumAmountModeActiveAsync(holdAsset))
+                        {
+                            buyOrderQuoteQty = minNotional;
 
-                    tradingId = await dbAdapter.InsertNewOperationAsync(holdAsset, tradeAsset, buyOrderQuoteQty, processId);
+                            logger.LogWarning("TradeMinimumAmountMode is Active, going to buy just near the minimum amount allowed.");
+                        }
 
-                    await Step2CreateBuyOrderAsync(processId);
+                        logger.LogInformation("BuyOrderQuoteQty: {BuyOrderQuoteQty}", buyOrderQuoteQty);
+
+                        tradingId = await dbAdapter.InsertNewOperationAsync(holdAsset, tradeAsset, buyOrderQuoteQty, processId);
+
+                        await Step2CreateBuyOrderAsync(processId);
+                    }
                 }
                 else
                 {
@@ -372,7 +389,7 @@ namespace TradingAgent
 
                     if(ocoStatus == null)
                     {
-                        logger.LogInformation("Trading #{TradingId}. Read NULL Oco order (not found). Assume it is being created (I hope) ... Will fail if read NULL more than 2 times.", activeTrading.Id);
+                        logger.LogDebug("Trading #{TradingId}. Read NULL Oco order (not found). Assume it is being created (I hope) ... Will fail if read NULL more than 2 times.", activeTrading.Id);
 
                         if (readConsecutiveStatusNullCount > 2)
                         {
@@ -448,7 +465,7 @@ namespace TradingAgent
 
                 logger.LogInformation("Trading #{TradingId}. OCO completed!", activeTrading.Id);
 
-                await UpdateStopThresholdAsync(activeTrading.Id);
+                await UpdateStopLossControldAsync(activeTrading.Id);
 
                 _ = KeepWatchingPriceAsync(activeTrading, processId);
             }
@@ -458,7 +475,7 @@ namespace TradingAgent
             }
         }
 
-        private async Task UpdateStopThresholdAsync(int trandingId)
+        private async Task UpdateStopLossControldAsync(int trandingId)
         {
             decimal estimatedFeesPercent = appConfig.EstimatedFeesPercent;
             Trading completedTrading = await dbAdapter.GetTradingAsync(trandingId);
@@ -492,6 +509,10 @@ namespace TradingAgent
             else
             {
                 logger.LogWarning("Trading #{TradingId}. Completed trade had loss: {TradeEarns} {HoldAsset}", completedTrading.Id, tradeEarns * -1, completedTrading.HoldAsset);
+                
+                await dbAdapter.SetTradeMinimumAmountModeActiveAsync(completedTrading.HoldAsset, true);
+
+                logger.LogWarning("MinimumAmountMode activeted... Next trades will spent just near the minimum amount allowed.");
             }
         }
 

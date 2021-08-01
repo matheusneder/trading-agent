@@ -100,6 +100,29 @@ namespace TradingAgent
             }
         }
 
+        public async Task<bool> IsTradeMinimumAmountModeActiveAsync(string holdAsset)
+        {
+            using(var db = CreateDbConnection())
+            {
+                return await db.QuerySingleAsync<bool>("select TradeMinimumAmountModeActive from StopLossControl where HoldAsset = @HoldAsset", new { HoldAsset = holdAsset });
+            }
+        }
+
+        public async Task SetTradeMinimumAmountModeActiveAsync(string holdAsset, bool value)
+        {
+            using (var db = CreateDbConnection())
+            {
+                await db.ExecuteAsync(
+                    "update StopLossControl set TradeMinimumAmountModeActive = @Value, UpdatedAt = @UpdatedAt where HoldAsset = @HoldAsset", 
+                    new 
+                    { 
+                        HoldAsset = holdAsset,
+                        Value = value,
+                        UpdatedAt = DateTimeOffset.Now
+                    });
+            }
+        }
+
         public async Task IncreamentStopThresholdAsync(string holdAsset, decimal stopThresholdIncrement)
         {
             using (var db = CreateDbConnection())
