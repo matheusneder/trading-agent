@@ -118,7 +118,7 @@ namespace TradingAgent
 
         private async Task HandleIncompleteRollbackOrUpgradeCancellingOcoOrderAsync(Trading activeTrading)
         {
-            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackOrUpgradeCancellingOcoOrder)} stage has detected.");
+            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.RollbackOrUpgradeCancellingOcoOrder)} stage has detected.", activeTrading.Id);
 
             var sellOrderStatus = await binanceApiAdapter.GetOcoOrderStatusAsync(activeTrading.Id, activeTrading.SellOrderBinanceIdSuffix);
 
@@ -254,7 +254,7 @@ namespace TradingAgent
         {
             var buyOrderCreatingTimeoutSeconds = 180;
 
-            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.CreatingBuyOrder)} stage has detected.");
+            logger.LogWarning($"Trading #{{TradingId}} :: incomplete trade on {nameof(Stage.CreatingBuyOrder)} stage has detected.", activeTrading.Id);
 
             var buyOrder = await binanceApiAdapter
                 .GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.BuyMarketOrder);

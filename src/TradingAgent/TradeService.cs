@@ -20,7 +20,7 @@ namespace TradingAgent
         private const int WatchPriceInterval = 2000;
         private const int WatchOrderInterval = 30000;
         private static readonly int WatchPriceMaxIterations = Convert.ToInt32(Math.Round((double)WatchOrderInterval / (double)WatchPriceInterval));
-        private const decimal BinanceMinNotional = 10m;
+        private const decimal BinanceMinNotional = 10m; // TODO: move to specific pair attribute (GET from /api/v3/exchangeInfo)
         private const decimal MinNotionalPercentageIncrement = 20m;
 
         public bool SkipDelays { get; set; } = false; // for test purposes only
@@ -112,7 +112,7 @@ namespace TradingAgent
                 {
                     await dbAdapter.UpdateTradingCreatingBuyOrderStageAsync(activeTrading.Id, processId);
                     
-                    logger.LogInformation($"Trading #{{TradingId}}. Creating buy order!");
+                    logger.LogInformation($"Trading #{{TradingId}}. Creating buy order!", activeTrading.Id);
 
                     await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () => 
                         await binanceApiAdapter.CreateBuyOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.BuyOrderQuoteQty));
@@ -168,7 +168,7 @@ namespace TradingAgent
             if (activeTrading != null)
             {
                 await dbAdapter.UpdateOrderCreatedStageAsync(activeTrading.Id, processId);
-                logger.LogInformation($"Trading #{{TradingId}}. Buy order created!");
+                logger.LogInformation($"Trading #{{TradingId}}. Buy order created!", activeTrading.Id);
 
                 await Step4RetriveBuyOrderDataAsync(processId);
             }
@@ -573,7 +573,7 @@ namespace TradingAgent
                         .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
                 }
                 
-                logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!");
+                logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
                     await binanceApiAdapter.CancelOcoOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.SellOrderBinanceIdSuffix));
@@ -596,7 +596,7 @@ namespace TradingAgent
             {
                 await dbAdapter.UpdateRollbackOrUpgradeStageCancelOcoOrderExecutedAsync(activeTrading.Id, processId);
 
-                logger.LogInformation($"Trading #{{TradingId}}. Cancel command executed!");
+                logger.LogInformation($"Trading #{{TradingId}}. Cancel command executed!", activeTrading.Id);
 
                 await Step11RollbackOrUpgradeCheckOcoCancelAsync(processId);
             }
@@ -652,7 +652,7 @@ namespace TradingAgent
                 if (ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "CANCELED")
                 {
                     await dbAdapter.UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(activeTrading.Id, processId);
-                    logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!");
+                    logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!", activeTrading.Id);
 
                     await Step6CreateSellOrderAsync(processId);
                 }
