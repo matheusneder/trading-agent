@@ -41,7 +41,7 @@ namespace TradingAgent.Tests
                 {
                     new BinanceAccountInfoResultDto.BalanceDto()
                     {
-                        asset = "BNB",
+                        asset = appConfig.HoldAsset,
                         free = "200.000",
                         locked = "0"
                     }
@@ -80,7 +80,7 @@ namespace TradingAgent.Tests
             binancePublicApiCLientMock.Setup(m => m.SymbolPriceTicker(It.IsAny<string>()))
                 .ReturnsAsync(new SymbolPriceTickerResultDto()
                 {
-                    symbol = "LTC",
+                    symbol = appConfig.TradeAsset,
                     price = "0.909"
                 });
 
@@ -169,7 +169,7 @@ namespace TradingAgent.Tests
 
             var symbolPriceTickerResult = new SymbolPriceTickerResultDto()
             {
-                symbol = "LTC",
+                symbol = appConfig.TradeAsset,
                 price = price.ToString("G", CultureInfo.InvariantCulture)
             };
 
@@ -216,7 +216,7 @@ namespace TradingAgent.Tests
 
             var symbolPriceTickerResult = new SymbolPriceTickerResultDto()
             {
-                symbol = "LTC",
+                symbol = appConfig.TradeAsset,
                 price = price.ToString("G", CultureInfo.InvariantCulture)
             };
 
@@ -264,7 +264,7 @@ namespace TradingAgent.Tests
 
             var symbolPriceTickerResult = new SymbolPriceTickerResultDto()
             {
-                symbol = "LTC",
+                symbol = appConfig.TradeAsset,
                 price = price.ToString("G", CultureInfo.InvariantCulture)
             };
 
