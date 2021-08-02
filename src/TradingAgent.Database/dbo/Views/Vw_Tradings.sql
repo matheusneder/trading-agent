@@ -31,5 +31,7 @@ select
 		SellOrderKind,
 		IsRollback,
 		ProcessId,
+		(SellOrderExecutedPrice * TradeAssetQty - BuyOrderQuoteQty) Profit,
+		(SellOrderExecutedPrice - BuyPrice) / BuyPrice * 100 ProfitPercentage,
 		Active
 	from Tradings
