@@ -297,10 +297,16 @@ namespace TradingAgent
                 //    sellPrice = MinusPercentage(sellPrice, targetProfitPerTradePercent - estimatedFeesPercent);
                 //}
 
+                decimal sellStopLimitPrice = activeTrading.SellStopLimitPrice.Value;
+                decimal sellStopTriggerPrice = MinusPercentage(sellStopLimitPrice, 0.3m); // TODO: make configurable
+
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
-                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, activeTrading.SellPrice.Value, activeTrading.SellStopLimitPrice.Value, sellOrderBinanceIdSuffix));
+                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, activeTrading.SellPrice.Value,
+                    sellStopTriggerPrice: sellStopTriggerPrice,
+                    sellStopLimitPrice: sellStopLimitPrice,
+                    sellOrderBinanceIdSuffix: sellOrderBinanceIdSuffix));
 
                 await Step7UpdateSellOrderCreatedStageAsync(processId);
             }
