@@ -440,8 +440,8 @@ namespace TradingAgent
 
                 } while (isOcoOrderActive);
 
-                var ocoStopLimitOrderKind = activeTrading.IsRollback ? OrderKind.SellOcoStopLimitRollbackOrder :  OrderKind.SellOcoStopLimitOrder;
-                var ocoStopLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoStopLimitOrderKind, sellOrderBinanceIdSuffix: activeTrading.SellOrderBinanceIdSuffix);
+                var ocoStopOrderKind = activeTrading.IsRollback ? OrderKind.SellOcoStopRollbackOrder :  OrderKind.SellOcoStopOrder;
+                var ocoStopOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoStopOrderKind, sellOrderBinanceIdSuffix: activeTrading.SellOrderBinanceIdSuffix);
 
                 var ocoLimitOrderKind = activeTrading.IsRollback ? OrderKind.SellOcoLimitRollbackOrder : OrderKind.SellOcoLimitOrder;
                 var ocoLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, ocoLimitOrderKind, sellOrderBinanceIdSuffix: activeTrading.SellOrderBinanceIdSuffix);
@@ -450,13 +450,13 @@ namespace TradingAgent
 
                 try
                 {
-                    executedOrder = (new Order[] { ocoStopLimitOrder, ocoLimitOrder }).Single(o => o.Status == "FILLED");
+                    executedOrder = (new Order[] { ocoStopOrder, ocoLimitOrder }).Single(o => o.Status == "FILLED");
                 }
                 catch(Exception e)
                 {
                     throw new InvalidOperationException(
-                        $"Could not get a single FILLED order from {nameof(ocoStopLimitOrder)}/{nameof(ocoLimitOrder)};{Environment.NewLine}" +
-                        $"{nameof(ocoStopLimitOrder)}: {JsonConvert.SerializeObject(ocoStopLimitOrder)};{Environment.NewLine}" +
+                        $"Could not get a single FILLED order from {nameof(ocoStopOrder)}/{nameof(ocoLimitOrder)};{Environment.NewLine}" +
+                        $"{nameof(ocoStopOrder)}: {JsonConvert.SerializeObject(ocoStopOrder)};{Environment.NewLine}" +
                         $"{nameof(ocoLimitOrder)}: {JsonConvert.SerializeObject(ocoLimitOrder)};{Environment.NewLine}", 
                         e);
                 }
@@ -645,7 +645,7 @@ namespace TradingAgent
                 } while (ocoStatus != "ALL_DONE");
 
                 var ocoLimitOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoLimitOrder, activeTrading.SellOrderBinanceIdSuffix);
-                var ocoStoptOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoStopLimitOrder, activeTrading.SellOrderBinanceIdSuffix);
+                var ocoStoptOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoStopOrder, activeTrading.SellOrderBinanceIdSuffix);
 
                 // Ensure order cancelled
                 if (ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "CANCELED")
