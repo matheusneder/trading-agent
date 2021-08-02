@@ -249,11 +249,11 @@ namespace TradingAgent
             {
                 decimal buyPrice = activeTrading.BuyPrice ?? throw new InvalidOperationException($"{nameof(Trading.BuyPrice)} is null");
                 decimal sellPrice = PlusPercentage(buyPrice, targetProfitPerTradePercent);
-                decimal sellStopLimitPrice = MinusPercentage(buyPrice, stopLossPercent);
+                decimal sellStopPrice = MinusPercentage(buyPrice, stopLossPercent);
                 decimal rollbackPrice = MinusPercentage(buyPrice, rollbackPricePercent);
                 decimal upgradePrice = PlusPercentage(buyPrice, upgradePricePercent);
 
-                await dbAdapter.UpdateSellOrderParametersCalculatedStageAsync(activeTrading.Id, sellPrice, sellStopLimitPrice, 
+                await dbAdapter.UpdateSellOrderParametersCalculatedStageAsync(activeTrading.Id, sellPrice, sellStopPrice, 
                     rollbackPrice: rollbackPrice, 
                     upgradePrice: upgradePrice, 
                     processId: processId);
@@ -300,7 +300,7 @@ namespace TradingAgent
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
                 await BinanceSignatureOrTimestampErrorRetrierHelperAsync(async () =>
-                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, activeTrading.SellPrice.Value, activeTrading.SellStopLimitPrice.Value, sellOrderBinanceIdSuffix));
+                    await binanceApiAdapter.CreateSellOrderAsync(activeTrading.Id, holdAsset, tradeAsset, activeTrading.TradeAssetQty.Value, activeTrading.SellPrice.Value, activeTrading.SellStopPrice.Value, sellOrderBinanceIdSuffix));
 
                 await Step7UpdateSellOrderCreatedStageAsync(processId);
             }
@@ -546,31 +546,30 @@ namespace TradingAgent
 
                     decimal newUpgradePrice;// = activeTrading.UpgradePrice.Value + incrementAmount;
 
-                    decimal newSellStopLimitPrice;
-                    //decimal oldSellStopLimitPrice = activeTrading.SellStopLimitPrice.Value;
+                    decimal newSellStopPrice;
 
                     if(activeTrading.UpgradeCount == 0)
                     {
                         newSellPrice = buyPrice * 2m;
-                        newSellStopLimitPrice = PlusPercentage(buyPrice, targetProfitPerTradePercent - 0.2m);
+                        newSellStopPrice = PlusPercentage(buyPrice, targetProfitPerTradePercent - 0.2m);
                         newUpgradePrice = PlusPercentage(buyPrice, targetProfitPerTradePercent + upgradePriceTriggerPercent); // 0.85 + 0.72 (do buy price)
                     }
                     else if(activeTrading.UpgradeCount == 1)
                     {
                         newSellPrice = buyPrice * 2m;
-                        newSellStopLimitPrice = PlusPercentage(buyPrice, targetProfitPerTradePercent);
-                        newUpgradePrice = PlusPercentage(newSellStopLimitPrice, appConfig.RollbackPricePercent); // 1.25
+                        newSellStopPrice = PlusPercentage(buyPrice, targetProfitPerTradePercent);
+                        newUpgradePrice = PlusPercentage(newSellStopPrice, appConfig.RollbackPricePercent); // 1.25
                     }
                     else
                     {
                         newSellPrice = buyPrice * 3m;
-                        newSellStopLimitPrice = PlusPercentage(activeTrading.SellStopLimitPrice.Value,
+                        newSellStopPrice = PlusPercentage(activeTrading.SellStopPrice.Value,
                                 MinusPercentage(upgradePriceIncrementPercent, Math.Min(activeTrading.UpgradeCount, 25)));
                         newUpgradePrice = PlusPercentage(activeTrading.UpgradePrice.Value, upgradePriceIncrementPercent); // 0.5
                     }
 
                         await dbAdapter
-                        .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopLimitPrice, newUpgradePrice, processId);
+                        .UpdateUpgradeStageCacellingOcoOrderAsync(activeTrading.Id, newSellPrice, newRollbackPrice, newSellStopPrice, newUpgradePrice, processId);
                 }
                 
                 logger.LogInformation($"Trading #{{TradingId}}. Cancelling oco order!", activeTrading.Id);
