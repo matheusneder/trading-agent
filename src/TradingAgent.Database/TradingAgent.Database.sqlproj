@@ -66,5 +66,6 @@
     <Build Include="dbo\Tables\Tradings.sql" />
     <Build Include="dbo\Tables\StopLossControl.sql" />
     <Build Include="dbo\Views\Vw_Tradings.sql" />
+    <Build Include="dbo\Stored Procedures\SingleTradeAsForm.sql" />
   </ItemGroup>
 </Project>

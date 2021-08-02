@@ -12,7 +12,7 @@
 	[BuyOrderFee] DECIMAL(18, 9) NULL,
 	[TradeAssetQty] DECIMAL(18, 9) NULL,
 	[SellPrice] DECIMAL(18, 9) NULL,
-	[SellStopPrice] DECIMAL(18, 9) NULL,
+	[SellStopLimitPrice] DECIMAL(18, 9) NULL,
 	[RollbackPrice] DECIMAL(18, 9) NULL,
 	[UpgradePrice] DECIMAL(18, 9) NULL,
 	[UpgradeCount] INT NOT NULL DEFAULT 0,

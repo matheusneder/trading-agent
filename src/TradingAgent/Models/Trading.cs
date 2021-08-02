@@ -19,7 +19,7 @@ namespace TradingAgent.Models
 		public decimal? BuyOrderFee { get; set; }
 		public decimal? TradeAssetQty { get; set; }
 		public decimal? SellPrice { get; set; }
-		public decimal? SellStopPrice { get; set; }
+		public decimal? SellStopLimitPrice { get; set; }
 		public decimal? UpgradePrice { get; set; }
 		public int UpgradeCount { get; set; }
 		public decimal? RollbackPrice { get;set; }

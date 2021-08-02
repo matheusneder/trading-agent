@@ -22,7 +22,7 @@ namespace TradingAgent
         Task NewOrderAsync(string symbol, string side, string type, string quoteOrderQty, string newClientOrderId);
 
         [Post("/api/v3/order/oco")]
-        Task NewOcoAsync(string symbol, string listClientOrderId, string side, string quantity, string limitClientOrderId, string price, string stopClientOrderId, string stopPrice, string stopLimitPrice = null, string stopLimitTimeInForce = null);
+        Task NewOcoAsync(string symbol, string listClientOrderId, string side, string quantity, string limitClientOrderId, string price, string stopClientOrderId, string stopPrice, string stopLimitPrice, string stopLimitTimeInForce);
 
         [Delete("/api/v3/orderList")]
         Task CancelOco(string symbol, string listClientOrderId);

@@ -162,7 +162,7 @@ namespace TradingAgent
             }
         }
 
-        public async Task CreateSellOrderAsync(int tradingId, string holdAsset, string tradeAsset, decimal tradeAssetQty, decimal sellPrice, decimal sellStopPrice, string sellOrderBinanceIdSuffix)
+        public async Task CreateSellOrderAsync(int tradingId, string holdAsset, string tradeAsset, decimal tradeAssetQty, decimal sellPrice, decimal sellStopLimitPrice, string sellOrderBinanceIdSuffix)
         {
            
             try
@@ -176,9 +176,9 @@ namespace TradingAgent
                         limitClientOrderId: $"TR-{tradingId}-LIMIT-{sellOrderBinanceIdSuffix}", 
                         price: sellPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         stopClientOrderId: $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}",
-                        stopPrice: sellStopPrice.ToString("0.####", CultureInfo.InvariantCulture) // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
-                        //stopLimitPrice: sellStopPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
-                        //stopLimitTimeInForce: "GTC"
+                        stopPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopLimitPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopLimitTimeInForce: "GTC"
                     );
             }
             catch(ApiException e)

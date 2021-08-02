@@ -247,12 +247,12 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopPrice, decimal rollbackPrice, decimal upgradePrice, string processId)
+        public async Task UpdateSellOrderParametersCalculatedStageAsync(int id, decimal sellPrice, decimal sellStopLimitPrice, decimal rollbackPrice, decimal upgradePrice, string processId)
         {
             var query = @"update Tradings set 
                                 Stage = @Stage,
                                 SellPrice = @SellPrice,
-                                SellStopPrice = @SellStopPrice,
+                                SellStopLimitPrice = @SellStopLimitPrice,
                                 RollbackPrice = @RollbackPrice,
                                 UpgradePrice = @UpgradePrice,
                                 UpdatedAt = @UpdatedAt
@@ -263,7 +263,7 @@ namespace TradingAgent
                 Id = id,
                 Stage = Stage.ParametersCalculated,
                 SellPrice = sellPrice,
-                SellStopPrice = sellStopPrice,
+                SellStopLimitPrice = sellStopLimitPrice,
                 RollbackPrice = rollbackPrice,
                 UpgradePrice = upgradePrice,
                 UpdatedAt = DateTimeOffset.Now,
@@ -424,12 +424,12 @@ namespace TradingAgent
             }
         }
 
-        public async Task UpdateUpgradeStageCacellingOcoOrderAsync(int id, decimal newSellPrice, decimal newRollbackPrice, decimal newSellStopPrice, decimal newUpgradePrice, string processId)
+        public async Task UpdateUpgradeStageCacellingOcoOrderAsync(int id, decimal newSellPrice, decimal newRollbackPrice, decimal newSellStopLimitPrice, decimal newUpgradePrice, string processId)
         {
             var query = @"update Tradings set
                                 SellPrice = @SellPrice,
                                 RollbackPrice = @RollbackPrice,
-                                SellStopPrice = @SellStopPrice,
+                                SellStopLimitPrice = @SellStopLimitPrice,
                                 UpgradePrice = @UpgradePrice,
                                 Stage = @Stage,
                                 UpgradeCount = UpgradeCount + 1,
@@ -443,7 +443,7 @@ namespace TradingAgent
                 UpdatedAt = DateTimeOffset.Now,
                 SellPrice = newSellPrice,
                 RollbackPrice = newRollbackPrice,
-                SellStopPrice = newSellStopPrice,
+                SellStopLimitPrice = newSellStopLimitPrice,
                 UpgradePrice = newUpgradePrice,
                 ProcessId = processId
             };
