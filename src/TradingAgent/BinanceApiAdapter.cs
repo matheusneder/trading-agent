@@ -71,11 +71,11 @@ namespace TradingAgent
                 case OrderKind.SellOcoRollbackOrder:
                     origClientOrderId = $"SellOcoRollbackOrder-{tradingId}";
                     break;
-                case OrderKind.SellOcoStopOrder:
-                    origClientOrderId = $"SellOcoStopOrder-{tradingId}";
+                case OrderKind.SellOcoStopLimitOrder:
+                    origClientOrderId = $"SellOcoStopLimitOrder-{tradingId}";
                     break;
-                case OrderKind.SellOcoStopRollbackOrder:
-                    origClientOrderId = $"SellOcoStopRollbackOrder-{tradingId}";
+                case OrderKind.SellOcoStopLimitRollbackOrder:
+                    origClientOrderId = $"SellOcoStopLimitRollbackOrder-{tradingId}";
                     break;
                 case OrderKind.SellOcoLimitOrder:
                     origClientOrderId = $"SellOcoLimitOrder-{tradingId}";
@@ -99,8 +99,8 @@ namespace TradingAgent
             {
                 switch (orderKind)
                 {
-                    case OrderKind.SellOcoStopRollbackOrder:
-                    case OrderKind.SellOcoStopOrder:
+                    case OrderKind.SellOcoStopLimitRollbackOrder:
+                    case OrderKind.SellOcoStopLimitOrder:
                         origClientOrderId = $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}";
                         break;
                     case OrderKind.SellOcoLimitRollbackOrder:

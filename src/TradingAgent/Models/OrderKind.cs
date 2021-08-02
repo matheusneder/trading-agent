@@ -10,9 +10,9 @@ namespace TradingAgent.Models
         BuyMarketOrder = 1,
         SellOcoOrder = 2,
         SellOcoLimitOrder = 3,
-        SellOcoStopOrder = 4,
+        SellOcoStopLimitOrder = 4,
         SellOcoRollbackOrder = 5,
         SellOcoLimitRollbackOrder = 6,
-        SellOcoStopRollbackOrder = 7  
+        SellOcoStopLimitRollbackOrder = 7  
     }
 }
