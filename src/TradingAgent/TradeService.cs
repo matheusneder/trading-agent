@@ -298,7 +298,7 @@ namespace TradingAgent
                 //}
 
                 decimal sellStopLimitPrice = activeTrading.SellStopLimitPrice.Value;
-                decimal sellStopTriggerPrice = MinusPercentage(sellStopLimitPrice, 0.3m); // TODO: make configurable
+                decimal sellStopTriggerPrice = PlusPercentage(sellStopLimitPrice, 0.3m); // TODO: make configurable
 
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
