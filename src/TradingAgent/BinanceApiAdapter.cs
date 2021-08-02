@@ -151,7 +151,7 @@ namespace TradingAgent
                         symbol: $"{tradeAsset}{holdAsset}",
                         side: "BUY",
                         type: "MARKET",
-                        quoteOrderQty: buyOrderQuoteQty.ToString("0.########", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        quoteOrderQty: buyOrderQuoteQty.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         newClientOrderId: GenerateClientOrderId(tradingId, OrderKind.BuyMarketOrder));
             }
             catch(ApiException e)
@@ -172,12 +172,12 @@ namespace TradingAgent
                         symbol: $"{tradeAsset}{holdAsset}",
                         listClientOrderId: $"TR-{tradingId}-LIST-{sellOrderBinanceIdSuffix}",
                         side: "SELL",
-                        quantity: tradeAssetQty.ToString("0.########", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        quantity: tradeAssetQty.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         limitClientOrderId: $"TR-{tradingId}-LIMIT-{sellOrderBinanceIdSuffix}", 
-                        price: sellPrice.ToString("0.########", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        price: sellPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         stopClientOrderId: $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}",
-                        stopPrice: sellStopLimitPrice.ToString("0.########", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
-                        stopLimitPrice: sellStopLimitPrice.ToString("0.########", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopLimitPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         stopLimitTimeInForce: "GTC"
                     );
             }
