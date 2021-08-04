@@ -22,6 +22,7 @@ namespace TradingAgent.Controllers
             this.dbAdapter = dbAdapter ?? throw new ArgumentNullException(nameof(dbAdapter));
         }
 
+        // RSI 5m CROSSING UP 35
         [HttpPost("/events/{whrObfuscatedRouteSegment}/ENJBUSD")]
         public IActionResult TradeEnjBusd(string whrObfuscatedRouteSegment)
         {
@@ -46,6 +47,7 @@ namespace TradingAgent.Controllers
             return Ok();
         }
 
+        // RSI 5m CROSSING DOWN 33.7
         [HttpPost("/events/{whrObfuscatedRouteSegment}/ENJBUSD/Prepare")]
         public async Task<IActionResult> TradeEnjBusdPrepareAsync(string whrObfuscatedRouteSegment)
         {
