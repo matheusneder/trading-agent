@@ -298,7 +298,8 @@ namespace TradingAgent
                 //}
 
                 decimal sellStopLimitPrice = activeTrading.SellStopLimitPrice.Value;
-                decimal sellStopTriggerPrice = PlusPercentage(sellStopLimitPrice, 0.3m); // TODO: make configurable
+                // decimal sellStopTriggerPrice = PlusPercentage(sellStopLimitPrice, 0.3m); // TODO: make configurable
+                decimal sellStopTriggerPrice = sellStopLimitPrice;
 
                 logger.LogInformation($"Trading #{{TradingId}}. Creating sell order!", activeTrading.Id);
 
@@ -473,7 +474,7 @@ namespace TradingAgent
 
                 await UpdateStopLossControldAsync(activeTrading.Id);
 
-                _ = KeepWatchingPriceAsync(activeTrading, processId);
+                //_ = KeepWatchingPriceAsync(activeTrading, processId); //TR 72 em diante
             }
             else
             {
