@@ -174,10 +174,10 @@ namespace TradingAgent
                         side: "SELL",
                         quantity: tradeAssetQty.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         limitClientOrderId: $"TR-{tradingId}-LIMIT-{sellOrderBinanceIdSuffix}", 
-                        price: sellPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        price: sellPrice.ToString("0.###", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         stopClientOrderId: $"TR-{tradingId}-STOP-{sellOrderBinanceIdSuffix}",
-                        stopPrice: sellStopTriggerPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
-                        stopLimitPrice: sellStopLimitPrice.ToString("0.####", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopPrice: sellStopTriggerPrice.ToString("0.###", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
+                        stopLimitPrice: sellStopLimitPrice.ToString("0.###", CultureInfo.InvariantCulture), // TODO: read precision from specific pair attribute (GET from /api/v3/exchangeInfo)
                         stopLimitTimeInForce: "GTC"
                     );
             }

@@ -656,7 +656,10 @@ namespace TradingAgent
                 var ocoStoptOrder = await binanceApiAdapter.GetOrderAsync(activeTrading.Id, activeTrading.HoldAsset, activeTrading.TradeAsset, OrderKind.SellOcoStopLimitOrder, activeTrading.SellOrderBinanceIdSuffix);
 
                 // Ensure order cancelled
-                if (ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "CANCELED")
+                if (ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "CANCELED" ||
+                    ocoLimitOrder.Status == "CANCELED" && ocoStoptOrder.Status == "EXPIRED" ||
+                    ocoLimitOrder.Status == "EXPIRED" && ocoStoptOrder.Status == "CANCELED" ||
+                    ocoLimitOrder.Status == "EXPIRED" && ocoStoptOrder.Status == "EXPIRED")
                 {
                     await dbAdapter.UpdateRollbackOrUpgradeStageOcoOrderCancelledAsync(activeTrading.Id, processId);
                     logger.LogInformation($"Trading #{{TradingId}}. Oco order cancelled!", activeTrading.Id);
